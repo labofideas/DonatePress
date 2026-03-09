@@ -1,0 +1,214 @@
+# DonatePress Extensibility (v1 foundation)
+
+## Actions
+
+- `donatepress_loaded`
+  - Fires when plugin runtime initializes.
+- `donatepress_register_rest_routes( string $namespace )`
+  - Fires after built-in REST routes are registered.
+- `donatepress_settings_updated( array $clean, array $current, array $raw_input )`
+  - Fires after settings are sanitized and saved.
+- `donatepress_rest_settings_updated( array $clean, array $payload )`
+  - Fires after settings are updated via REST API.
+- `donatepress_render_settings_panels( string $option_key )`
+  - Add custom settings panel markup on admin settings page.
+- `donatepress_donation_pending_created( int $donation_id, array $data )`
+  - Fires after a pending donation row is created.
+- `donatepress_webhook_received( string $gateway, array $result )`
+  - Fires after a webhook is verified and handled.
+- `donatepress_stripe_webhook_event( string $event_type, array $payload )`
+  - Fires for verified Stripe events.
+- `donatepress_paypal_webhook_event( string $event_type, array $payload )`
+  - Fires for verified PayPal events.
+- `donatepress_donation_status_synced( int $donation_id, string $status, string $gateway, string $event_type )`
+  - Fires when webhook status sync updates a donation row.
+- `donatepress_subscription_status_updated( int $subscription_id, string $status, array $previous )`
+  - Fires when subscription status is updated via REST API.
+- `donatepress_portal_magic_link_requested( string $email, string $magic_url, array $result )`
+  - Fires after donor portal magic link generation.
+- `donatepress_portal_subscription_action( int $subscription_id, string $action, string $current_status, string $next_status, string $email )`
+  - Fires when a donor changes subscription state from portal.
+- `donatepress_subscription_retry_due( int $subscription_id, string $gateway, array $subscription )`
+  - Fires when a failed subscription reaches retry schedule and should be retried.
+- `donatepress_subscription_retries_exhausted( int $subscription_id, int $failure_count, int $max_retries )`
+  - Fires when retries are exhausted and subscription is marked expired.
+- `donatepress_retry_cron_processed( array $result )`
+  - Fires after recurring retry cron job processes queue.
+- `donatepress_audit_log_entry( array $record )`
+  - Fires when structured audit event is logged.
+- `donatepress_subscription_retry_succeeded( int $subscription_id, string $gateway, array $result )`
+  - Fires when a retry attempt succeeds.
+- `donatepress_subscription_retry_failed( int $subscription_id, string $gateway, array $result, int $failure_count, string $retry_at )`
+  - Fires when a retry attempt fails and is rescheduled.
+- `donatepress_subscription_retry_processed( int $subscription_id, string $gateway, array $result, array $subscription )`
+  - Fires after each retry execution attempt.
+- `donatepress_wc_order_synced( int $order_id, int $donation_id, int $item_id, float $amount )`
+  - Fires when WooCommerce paid order line is synced into DonatePress donation.
+- `donatepress_wc_refund_synced( int $order_id, int $refund_id, array $donation_ids )`
+  - Fires when WooCommerce refund marks synced DonatePress donations as refunded.
+- `donatepress_receipt_emailed( array $donation )`
+  - Fires after donation receipt email is sent.
+- `donatepress_buddypress_loaded()`
+  - Fires when BuddyPress integration layer is initialized.
+- `donatepress_bp_profile_nav_registered( string $slug, string $name )`
+  - Fires after BuddyPress profile nav item registration.
+
+## Filters
+
+- `donatepress_settings_defaults( array $defaults )`
+  - Modify default plugin settings on activation.
+- `donatepress_required_settings_fields( array $fields )`
+  - Modify required compliance fields.
+- `donatepress_allowed_recurring_frequencies( array $frequencies )`
+  - Modify recurring frequency options.
+- `donatepress_supported_countries( array $countries, array $input )`
+  - Normalize/override allowed countries on save.
+- `donatepress_rest_status_data( array $data )`
+  - Modify public status endpoint payload.
+- `donatepress_rest_settings_response( array $settings )`
+  - Modify admin settings REST response payload.
+- `donatepress_rest_settings_payload( array $payload )`
+  - Modify incoming REST payload before merge/sanitize.
+- `donatepress_rest_can_manage( bool $allowed, WP_REST_Request $request )`
+  - Override admin REST permission checks.
+- `donatepress_capability_map( array $map, ?WP_REST_Request $request )`
+  - Override scoped capability map used by admin/manage controllers.
+- `donatepress_user_can( bool $allowed, string $scope, string $capability, ?WP_REST_Request $request )`
+  - Override final scoped capability decision.
+- `donatepress_prepare_pending_donation( array $data, array $payload )`
+  - Change pending donation payload before DB insert.
+- `donatepress_submit_response( array $result, array $payload )`
+  - Change response payload for submission endpoint.
+- `donatepress_submission_rate_limit( int $limit )`
+  - Customize submit rate limit (default 8 requests).
+- `donatepress_submission_rate_window( int $seconds )`
+  - Customize rate-limit window (default 60 seconds).
+- `donatepress_gateways( array $gateways )`
+  - Register custom gateway instances.
+- `donatepress_start_payment_result( array $result, string $gateway_id, array $donation, array $context )`
+  - Modify unified payment start result.
+- `donatepress_stripe_start_payment( array $response, array $donation, array $context )`
+  - Override Stripe start-payment output.
+- `donatepress_stripe_payment_intent_body( array $body, array $donation, array $context )`
+  - Override Stripe PaymentIntent request body.
+- `donatepress_stripe_payment_intent_request_args( array $request_args, array $donation, array $context )`
+  - Override Stripe HTTP request args before API call.
+- `donatepress_paypal_start_payment( array $response, array $donation, array $context )`
+  - Override PayPal start-payment output.
+- `donatepress_paypal_oauth_request_args( array $args )`
+  - Override PayPal OAuth request args.
+- `donatepress_paypal_order_body( array $body, array $donation, array $context )`
+  - Override PayPal order creation body.
+- `donatepress_paypal_order_request_args( array $request_args, array $donation, array $context )`
+  - Override PayPal order creation request args.
+- `donatepress_paypal_verify_request_args( array $request_args, array $verify_body )`
+  - Override PayPal webhook verification request args.
+- `donatepress_paypal_api_base( string $base, bool $live )`
+  - Override PayPal API base URL.
+- `donatepress_stripe_webhook_tolerance( int $seconds )`
+  - Adjust Stripe replay tolerance (default 300s).
+- `donatepress_paypal_verify_webhook( bool $verified, array $headers, string $payload, array $settings )`
+  - Provide PayPal verification implementation.
+- `donatepress_webhook_result( array $result, string $gateway_id, array $headers, string $payload )`
+  - Modify webhook handler output.
+- `donatepress_retry_subscription_result( array $result, string $gateway_id, array $subscription )`
+  - Normalize retry result after gateway retry execution.
+- `donatepress_stripe_retry_subscription_charge( array $default, array $subscription )`
+  - Override Stripe retry charge execution result.
+- `donatepress_paypal_retry_subscription_charge( array $default, array $subscription )`
+  - Override PayPal retry charge execution result.
+- `donatepress_paypal_retry_request_args( array $request, array $subscription, array $capture_body )`
+  - Override PayPal retry capture request before API call.
+- `donatepress_portal_magic_ttl( int $seconds )`
+  - Adjust donor portal magic-link TTL (default 15 minutes).
+- `donatepress_portal_session_ttl( int $seconds )`
+  - Adjust donor portal session lifetime (default 24 hours).
+- `donatepress_portal_email_rate_limit( int $limit )`
+  - Max magic-link requests per email in rate window.
+- `donatepress_portal_ip_rate_limit( int $limit )`
+  - Max magic-link requests per IP in rate window.
+- `donatepress_portal_auth_rate_limit( int $limit )`
+  - Max portal auth attempts per IP in rate window.
+- `donatepress_portal_rate_window( int $seconds )`
+  - Shared portal rate-limit window (default 15 minutes).
+- `donatepress_portal_magic_url_base( string $url )`
+  - Base URL used when building donor magic links.
+- `donatepress_portal_expose_magic_url( bool $enabled )`
+  - Expose generated magic URL in API response (debug-only).
+- `donatepress_portal_magic_subject( string $subject, string $email, string $magic_url )`
+  - Customize donor magic-link email subject.
+- `donatepress_portal_magic_body( string $body, string $email, string $magic_url, int $ttl_seconds )`
+  - Customize donor magic-link email body.
+- `donatepress_bp_profile_tab_enabled( bool $enabled )`
+  - Enable/disable DonatePress BuddyPress profile tab.
+- `donatepress_bp_profile_tab_slug( string $slug )`
+  - Customize BuddyPress profile tab slug.
+- `donatepress_bp_profile_tab_label( string $label )`
+  - Customize BuddyPress profile tab label.
+- `donatepress_bp_profile_template( string $template )`
+  - Customize BuddyPress profile template used for DonatePress tab.
+- `donatepress_bp_profile_donations_limit( int $limit )`
+  - Customize max donation rows shown in BuddyPress profile tab.
+
+## REST Endpoints
+
+Base: `/wp-json/donatepress/v1`
+
+- `GET /status` (public)
+- `GET /settings` (admin)
+- `POST /settings` (admin)
+- `GET /setup-wizard/status` (admin)
+- `POST /setup-wizard/save` (admin)
+- `POST /setup-wizard/first-form` (admin)
+- `POST /setup-wizard/complete` (admin)
+- `POST /donations/submit` (public + nonce + honeypot + rate-limit)
+- `POST /webhooks/{gateway}` (public, signature/verification required)
+- `GET /subscriptions` (admin, supports `limit` and `status`)
+- `POST /subscriptions/{id}/status` (admin)
+- `GET /reports/summary` (admin)
+- `GET /donors` (admin)
+- `GET /forms` (admin)
+- `GET /campaigns` (admin)
+- `POST /portal/request-link` (public, generic response + rate-limited + origin check)
+- `POST /portal/auth` (public, consume one-time token and issue session token)
+- `GET /portal/me` (portal session required)
+- `GET /portal/donations` (portal session required)
+- `GET /portal/subscriptions` (portal session required)
+- `POST /portal/subscriptions/{id}/action` (portal session required, actions: pause/resume/cancel)
+- `GET /portal/annual-summary` (portal session required)
+- `GET /portal/annual-summary/download` (portal session required; returns CSV payload)
+- `GET /portal/receipts/{id}/download` (portal session required; returns receipt payload)
+- `POST /portal/logout` (portal session optional)
+
+## Capability Scopes (v1)
+
+- `settings.manage`
+  - Used by settings read/write routes.
+- `donors.manage`
+  - Used by donor CRUD/block/anonymize/merge routes.
+- `forms.manage`
+  - Used by form CRUD routes.
+- `campaigns.manage`
+  - Used by campaign CRUD routes.
+- `campaign_updates.manage`
+  - Used by campaign update CRUD routes.
+- `subscriptions.manage`
+  - Used by subscription listing/status routes.
+- `reports.view`
+  - Used by reporting and aggregate analytics routes.
+- `admin.settings`
+  - Used by Settings admin menu/page visibility.
+- `admin.setup`
+  - Used by Setup Wizard admin page visibility.
+- `admin.donations`
+  - Used by Donations admin page visibility.
+- `admin.donors`
+  - Used by Donors admin page visibility.
+- `admin.forms`
+  - Used by Forms admin page visibility.
+- `admin.campaigns`
+  - Used by Campaigns admin page visibility.
+- `admin.reports`
+  - Used by Reports admin page visibility.
+- `admin.subscriptions`
+  - Used by Subscriptions admin page visibility.

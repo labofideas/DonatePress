@@ -1,0 +1,60 @@
+.donatepress-campaign {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  padding: 16px;
+}
+
+.dp-campaign-progress {
+  margin: 14px 0 18px;
+}
+
+.dp-progress-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.dp-progress-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+}
+
+.dp-progress-label {
+  margin: 6px 0 0;
+  color: #14532d;
+  font-weight: 700;
+}
+
+.dp-campaign-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.dp-campaign-updates ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.dp-campaign-updates li {
+  margin-bottom: 12px;
+}
+
+.dp-campaign-updates h4 {
+  margin: 0 0 4px;
+}
+
+.dp-update-meta {
+  margin: 0 0 6px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .dp-campaign-layout {
+    grid-template-columns: 1fr;
+  }
+}

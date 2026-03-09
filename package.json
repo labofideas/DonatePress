@@ -1,0 +1,14 @@
+{
+  "name": "donatepress-e2e",
+  "private": true,
+  "version": "0.1.0",
+  "description": "DonatePress Playwright E2E test harness",
+  "scripts": {
+    "test:e2e": "playwright test -c tests/e2e/playwright.config.js",
+    "test:e2e:headed": "playwright test -c tests/e2e/playwright.config.js --headed",
+    "test:e2e:ui": "playwright test -c tests/e2e/playwright.config.js --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.0"
+  }
+}

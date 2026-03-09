@@ -1,0 +1,134 @@
+.donatepress-form {
+  display: grid;
+  gap: 12px;
+  max-width: 520px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.donatepress-form .dp-field label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.donatepress-form input,
+.donatepress-form textarea,
+.donatepress-form select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.donatepress-form button {
+  border: 0;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.donatepress-form .dp-message {
+  margin: 0;
+  font-size: 13px;
+}
+
+.donatepress-form .dp-message.is-error {
+  color: #b91c1c;
+}
+
+.donatepress-form .dp-message.is-success {
+  color: #166534;
+}
+
+.donatepress-form .dp-step[hidden] {
+  display: none;
+}
+
+.donatepress-form .dp-actions-row {
+  display: flex;
+  gap: 10px;
+}
+
+.donatepress-form .dp-secondary {
+  background: #334155;
+}
+
+.donatepress-form .dp-amount-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.donatepress-form .dp-preset {
+  background: #eef2ff;
+  color: #1e293b;
+  border: 1px solid #c7d2fe;
+}
+
+.donatepress-form .dp-preset.is-active {
+  background: #1d4ed8;
+  color: #fff;
+  border-color: #1d4ed8;
+}
+
+.donatepress-form .dp-static-amount {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.donatepress-form .dp-payment-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+}
+
+.donatepress-form .dp-payment-panel[hidden] {
+  display: none;
+}
+
+.donatepress-form .dp-payment-panel h3,
+.donatepress-form .dp-payment-panel p {
+  margin: 0;
+}
+
+.donatepress-form .dp-payment-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-decoration: none;
+}
+
+.donatepress-form .dp-payment-button-paypal {
+  background: #f59e0b;
+  color: #111827;
+}
+
+.donatepress-form .dp-stripe-checkout {
+  display: grid;
+  gap: 10px;
+}
+
+.donatepress-form .dp-stripe-element {
+  padding: 10px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+}
+
+.donatepress-form .dp-payment-inline-message {
+  margin: 0;
+  font-size: 13px;
+  color: #334155;
+}
