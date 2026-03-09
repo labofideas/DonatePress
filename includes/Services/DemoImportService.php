@@ -333,8 +333,7 @@ class DemoImportService {
 		return implode(
 			"\n\n",
 			array(
-				'<!-- wp:heading {"level":1} --><h1>Donor Portal</h1><!-- /wp:heading -->',
-				'<!-- wp:paragraph --><p>Use this page to preview the self-service donor portal layout for returning supporters. Donors can request a secure email link and return to view donations, receipts, and recurring status.</p><!-- /wp:paragraph -->',
+				'<!-- wp:paragraph --><p>Supporters can use this page to view past gifts, download receipts, and manage recurring donations without contacting your team.</p><!-- /wp:paragraph -->',
 				'<!-- wp:shortcode -->[donatepress_portal]<!-- /wp:shortcode -->',
 			)
 		);

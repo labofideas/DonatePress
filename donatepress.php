@@ -28,9 +28,6 @@ register_deactivation_hook( __FILE__, array( 'DonatePress\\Core\\Activator', 'de
 
 add_action( 'plugins_loaded', 'donatepress_bootstrap' );
 
-/**
- * Basic PSR-4-like autoloader for the plugin namespace.
- */
 function autoload_donatepress() {
 	spl_autoload_register(
 		static function ( $class ) {
@@ -50,9 +47,6 @@ function autoload_donatepress() {
 	);
 }
 
-/**
- * Boot plugin runtime.
- */
 function donatepress_bootstrap() {
 	load_plugin_textdomain( 'donatepress', false, dirname( plugin_basename( DONATEPRESS_FILE ) ) . '/languages' );
 
@@ -62,7 +56,7 @@ function donatepress_bootstrap() {
 
 if ( ! function_exists( 'donatepress_render_form' ) ) {
 	/**
-	 * Render DonatePress form via PHP.
+	 * Render a DonatePress form from PHP templates or theme code.
 	 *
 	 * @param array<string,mixed> $atts Shortcode-like attributes.
 	 */

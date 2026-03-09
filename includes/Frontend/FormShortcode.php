@@ -10,21 +10,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/**
- * Basic donation form shortcode renderer.
- */
 class FormShortcode {
-	/**
-	 * Register frontend hooks.
-	 */
 	public function register(): void {
 		add_shortcode( 'donatepress_form', array( $this, 'render' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
 	}
 
-	/**
-	 * Register script/style handles.
-	 */
 	public function register_assets(): void {
 		wp_register_style(
 			'donatepress-form',
@@ -42,9 +33,6 @@ class FormShortcode {
 		);
 	}
 
-	/**
-	 * Render shortcode.
-	 */
 	public function render( array $atts ): string {
 		$atts = shortcode_atts(
 			array(
@@ -100,7 +88,7 @@ class FormShortcode {
 			<div class="dp-step" data-dp-step="1">
 				<?php if ( ! empty( $config['amount_presets'] ) ) : ?>
 					<div class="dp-field">
-						<label><?php echo esc_html__( 'Choose Amount', 'donatepress' ); ?></label>
+						<label><?php echo esc_html__( 'Choose an amount', 'donatepress' ); ?></label>
 						<div class="dp-amount-presets" data-dp-amount-presets>
 							<?php foreach ( $config['amount_presets'] as $preset ) : ?>
 								<button type="button" class="dp-preset" data-dp-amount="<?php echo esc_attr( (string) $preset ); ?>">
@@ -135,7 +123,7 @@ class FormShortcode {
 					<div class="dp-field">
 						<label>
 							<input type="checkbox" name="is_recurring" value="1" <?php checked( ! empty( $config['recurring_default'] ) ); ?> />
-							<?php echo esc_html__( 'Make this recurring', 'donatepress' ); ?>
+							<?php echo esc_html__( 'Make this a recurring gift', 'donatepress' ); ?>
 						</label>
 					</div>
 					<div class="dp-field">
@@ -175,7 +163,7 @@ class FormShortcode {
 					<div class="dp-field">
 						<label>
 							<input type="checkbox" name="consent" value="1" required />
-							<?php echo esc_html__( 'I agree to the terms and privacy policy.', 'donatepress' ); ?>
+							<?php echo esc_html__( 'I agree to the privacy policy and terms for this donation.', 'donatepress' ); ?>
 						</label>
 					</div>
 				<?php endif; ?>
@@ -191,8 +179,8 @@ class FormShortcode {
 				<button type="submit"><?php echo esc_html__( 'Donate Now', 'donatepress' ); ?></button>
 			<?php endif; ?>
 			<div class="dp-payment-panel" data-dp-payment-panel hidden>
-				<h3 data-dp-payment-title><?php echo esc_html__( 'Complete Payment', 'donatepress' ); ?></h3>
-				<p data-dp-payment-note><?php echo esc_html__( 'Finish the payment step to complete your donation.', 'donatepress' ); ?></p>
+				<h3 data-dp-payment-title><?php echo esc_html__( 'Complete your payment', 'donatepress' ); ?></h3>
+				<p data-dp-payment-note><?php echo esc_html__( 'Your donation has been started. Finish the payment step below to confirm it.', 'donatepress' ); ?></p>
 				<div data-dp-payment-content></div>
 			</div>
 			<p class="dp-message" data-dp-message aria-live="polite"></p>
@@ -209,11 +197,6 @@ class FormShortcode {
 		return (string) apply_filters( 'donatepress_render_form_html', $html, $atts );
 	}
 
-	/**
-	 * Fetch form by id from repository.
-	 *
-	 * @return array<string,mixed>|null
-	 */
 	private function load_form( int $id ): ?array {
 		global $wpdb;
 		if ( ! isset( $wpdb ) ) {
@@ -224,11 +207,6 @@ class FormShortcode {
 		return $repository->find( $id );
 	}
 
-	/**
-	 * Resolve a valid frontend form when the requested id is missing.
-	 *
-	 * @return array<string,mixed>|null
-	 */
 	private function resolve_fallback_form(): ?array {
 		global $wpdb;
 		if ( ! ( $wpdb instanceof \wpdb ) ) {

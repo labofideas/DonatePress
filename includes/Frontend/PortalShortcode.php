@@ -6,21 +6,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/**
- * Donor portal frontend shortcode.
- */
 class PortalShortcode {
-	/**
-	 * Register hooks.
-	 */
 	public function register(): void {
 		add_shortcode( 'donatepress_portal', array( $this, 'render' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
 	}
 
-	/**
-	 * Register script/style handles.
-	 */
 	public function register_assets(): void {
 		wp_register_style(
 			'donatepress-portal',
@@ -38,9 +29,6 @@ class PortalShortcode {
 		);
 	}
 
-	/**
-	 * Render portal shortcode.
-	 */
 	public function render( array $atts ): string {
 		wp_enqueue_style( 'donatepress-portal' );
 		wp_enqueue_script( 'donatepress-portal' );
@@ -51,20 +39,20 @@ class PortalShortcode {
 		?>
 		<div class="donatepress-portal" data-dp-portal data-rest-base="<?php echo esc_url( $base ); ?>" data-dp-nonce="<?php echo esc_attr( $nonce ); ?>">
 			<div class="dp-portal-card" data-dp-stage="request">
-				<h3><?php echo esc_html__( 'Donor Portal Access', 'donatepress' ); ?></h3>
-				<p><?php echo esc_html__( 'Enter your donation email to receive a secure login link. Returning donors can click the email link and sign in automatically.', 'donatepress' ); ?></p>
+				<h3><?php echo esc_html__( 'Access your donor portal', 'donatepress' ); ?></h3>
+				<p><?php echo esc_html__( 'Enter the email address you used for donations and we will send you a secure sign-in link.', 'donatepress' ); ?></p>
 				<form data-dp-request-link>
 					<label><?php echo esc_html__( 'Email', 'donatepress' ); ?></label>
 					<input type="email" name="email" required />
-					<button type="submit"><?php echo esc_html__( 'Send Link', 'donatepress' ); ?></button>
+					<button type="submit"><?php echo esc_html__( 'Email me a link', 'donatepress' ); ?></button>
 				</form>
 			</div>
 
 			<div class="dp-portal-card" data-dp-stage="auth">
-				<h3><?php echo esc_html__( 'Magic Token Login', 'donatepress' ); ?></h3>
-				<p><?php echo esc_html__( 'If you opened the email link directly, DonatePress will sign you in automatically. You can still paste the token manually if needed.', 'donatepress' ); ?></p>
+				<h3><?php echo esc_html__( 'Finish signing in', 'donatepress' ); ?></h3>
+				<p><?php echo esc_html__( 'If you opened the email link, you should be signed in automatically. You can still paste the access token below if needed.', 'donatepress' ); ?></p>
 				<form data-dp-auth>
-					<label><?php echo esc_html__( 'Token', 'donatepress' ); ?></label>
+					<label><?php echo esc_html__( 'Access token', 'donatepress' ); ?></label>
 					<input type="text" name="token" required />
 					<button type="submit"><?php echo esc_html__( 'Sign In', 'donatepress' ); ?></button>
 				</form>
