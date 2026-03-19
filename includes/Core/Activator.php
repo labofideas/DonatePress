@@ -47,7 +47,9 @@ class Activator {
 			}
 		}
 
-		update_option( 'donatepress_db_version', DONATEPRESS_VERSION );
+		if ( version_compare( $db_version, DONATEPRESS_VERSION, '!=' ) ) {
+			update_option( 'donatepress_db_version', DONATEPRESS_VERSION );
+		}
 	}
 
 	/**

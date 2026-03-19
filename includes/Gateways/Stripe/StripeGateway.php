@@ -222,7 +222,7 @@ class StripeGateway implements GatewayInterface {
 		}
 
 		$subscription = $processor->resolve_subscription( $donation, 'stripe', $subscription_ref );
-		$subscription_status = $this->map_subscription_status( $event_type, is_array( $object ) ? $object : array() );
+		$subscription_status = $this->map_subscription_status( $event_type, $object );
 
 		if ( $subscription ) {
 			$processor->process_subscription(

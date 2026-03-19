@@ -174,7 +174,7 @@ class WebhookProcessor {
 			return false;
 		}
 
-		$lock_key = 'dp_wh_' . $gateway . '_' . md5( $event_id );
+		$lock_key = 'dp_wh_' . $gateway . '_' . hash( 'sha256', $event_id );
 		if ( get_transient( $lock_key ) ) {
 			return true;
 		}
