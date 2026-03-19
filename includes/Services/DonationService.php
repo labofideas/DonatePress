@@ -140,6 +140,6 @@ class DonationService {
 	 * Generate donation number.
 	 */
 	private function generate_number(): string {
-		return 'DP-' . gmdate( 'YmdHis' ) . '-' . wp_rand( 100, 999 );
+		return 'DP-' . gmdate( 'YmdHis' ) . '-' . strtoupper( wp_generate_password( 8, false, false ) );
 	}
 }

@@ -20,8 +20,34 @@ class Activator {
 		add_option( 'donatepress_setup_completed', 0 );
 
 		self::create_tables();
+		self::run_migrations();
 		self::maybe_seed_defaults();
 		self::schedule_events();
+	}
+
+	/**
+	 * Run schema migrations when the DB version is behind the plugin version.
+	 *
+	 * Add new migration callbacks keyed by version to the $migrations array.
+	 * Each callback runs once, and the DB version is updated after each step.
+	 */
+	private static function run_migrations(): void {
+		$db_version = (string) get_option( 'donatepress_db_version', '0.0.0' );
+
+		$migrations = array(
+			// '0.2.0' => array( self::class, 'migrate_0_2_0' ),
+		);
+
+		uksort( $migrations, 'version_compare' );
+
+		foreach ( $migrations as $version => $callback ) {
+			if ( version_compare( $db_version, $version, '<' ) && is_callable( $callback ) ) {
+				call_user_func( $callback );
+				update_option( 'donatepress_db_version', $version );
+			}
+		}
+
+		update_option( 'donatepress_db_version', DONATEPRESS_VERSION );
 	}
 
 	/**

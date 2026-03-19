@@ -47,7 +47,7 @@ class SubscriptionService {
 				'currency'                => strtoupper( sanitize_text_field( (string) ( $donation['currency'] ?? 'USD' ) ) ),
 				'frequency'               => $frequency,
 				'status'                  => '' !== $gateway_subscription_id ? 'active' : 'pending',
-				'next_payment_at'         => $this->next_cycle_datetime( $frequency ),
+				'next_payment_at'         => WebhookProcessor::next_cycle_datetime( $frequency ),
 			)
 		);
 
@@ -66,17 +66,6 @@ class SubscriptionService {
 	}
 
 	private function generate_number(): string {
-		return 'DPS-' . gmdate( 'YmdHis' ) . '-' . wp_rand( 100, 999 );
-	}
-
-	/**
-	 * Resolve next expected billing datetime from frequency.
-	 */
-	private function next_cycle_datetime( string $frequency ): string {
-		$base = current_time( 'timestamp', true );
-		if ( 'annual' === $frequency ) {
-			return gmdate( 'Y-m-d H:i:s', strtotime( '+1 year', $base ) );
-		}
-		return gmdate( 'Y-m-d H:i:s', strtotime( '+1 month', $base ) );
+		return 'DPS-' . gmdate( 'YmdHis' ) . '-' . strtoupper( wp_generate_password( 8, false, false ) );
 	}
 }

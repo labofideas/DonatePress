@@ -25,9 +25,13 @@ class PaymentService {
 	/**
 	 * Constructor.
 	 */
-	public function __construct() {
-		$settings             = new SettingsService();
-		$this->gateway_manager = new GatewayManager( $settings );
+	public function __construct( ?GatewayManager $gateway_manager = null ) {
+		if ( $gateway_manager ) {
+			$this->gateway_manager = $gateway_manager;
+		} else {
+			$settings              = new SettingsService();
+			$this->gateway_manager = new GatewayManager( $settings );
+		}
 	}
 
 	/**
@@ -168,13 +172,6 @@ class PaymentService {
 		$data = json_decode( $payload, true );
 		if ( ! is_array( $data ) ) {
 			return '';
-		}
-
-		if ( 'stripe' === $gateway_id ) {
-			return sanitize_text_field( (string) ( $data['id'] ?? '' ) );
-		}
-		if ( 'paypal' === $gateway_id ) {
-			return sanitize_text_field( (string) ( $data['id'] ?? '' ) );
 		}
 
 		return sanitize_text_field( (string) ( $data['id'] ?? '' ) );

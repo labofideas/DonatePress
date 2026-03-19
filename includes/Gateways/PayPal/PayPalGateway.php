@@ -3,9 +3,8 @@
 namespace DonatePress\Gateways\PayPal;
 
 use DonatePress\Gateways\GatewayInterface;
-use DonatePress\Repositories\DonationRepository;
-use DonatePress\Repositories\SubscriptionRepository;
 use DonatePress\Services\SettingsService;
+use DonatePress\Services\WebhookProcessor;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -221,18 +220,16 @@ class PayPalGateway implements GatewayInterface {
 		$event_id   = sanitize_text_field( (string) ( $data['id'] ?? '' ) );
 		$event_type = sanitize_text_field( (string) ( $data['event_type'] ?? '' ) );
 
-		if ( '' !== $event_id ) {
-			$event_lock = 'dp_wh_paypal_' . md5( $event_id );
-			if ( get_transient( $event_lock ) ) {
-				return array(
-					'success'    => true,
-					'provider'   => 'paypal',
-					'event_id'   => $event_id,
-					'event_type' => $event_type,
-					'duplicate'  => true,
-				);
-			}
-			set_transient( $event_lock, 1, DAY_IN_SECONDS );
+		$processor = WebhookProcessor::from_globals();
+
+		if ( $processor->is_duplicate_event( 'paypal', $event_id ) ) {
+			return array(
+				'success'    => true,
+				'provider'   => 'paypal',
+				'event_id'   => $event_id,
+				'event_type' => $event_type,
+				'duplicate'  => true,
+			);
 		}
 
 		$resource = is_array( $data['resource'] ?? null ) ? $data['resource'] : array();
@@ -253,80 +250,33 @@ class PayPalGateway implements GatewayInterface {
 			$subscription_ref = sanitize_text_field( (string) ( $resource['billing_agreement_id'] ?? '' ) );
 		}
 
-		global $wpdb;
-		$repo     = new DonationRepository( $wpdb );
-		$sub_repo = new SubscriptionRepository( $wpdb );
-		$donation = null;
-
-		if ( $donation_id > 0 ) {
-			$donation = $repo->find( $donation_id );
-		}
-		if ( ! $donation ) {
-			foreach ( $candidates as $candidate ) {
-				$found = $repo->find_by_gateway_transaction( (string) $candidate );
-				if ( $found ) {
-					$donation = $found;
-					break;
-				}
-			}
-		}
+		$donation = $processor->resolve_donation( $donation_id, $candidates );
 
 		if ( $donation ) {
 			$transaction_ref = (string) ( $related['order_id'] ?? $resource['id'] ?? '' );
-			if ( '' !== $transaction_ref ) {
-				$repo->update_gateway_transaction( (int) $donation['id'], $transaction_ref );
-			}
+			$processor->update_donation_transaction( (int) $donation['id'], $transaction_ref );
 
-			$status_map = array(
+			$donation_status_map = array(
 				'PAYMENT.CAPTURE.COMPLETED' => 'completed',
 				'PAYMENT.CAPTURE.DENIED'    => 'failed',
 				'PAYMENT.CAPTURE.DECLINED'  => 'failed',
 				'PAYMENT.CAPTURE.REFUNDED'  => 'refunded',
 			);
-
-			if ( isset( $status_map[ $event_type ] ) ) {
-				$repo->update_status( (int) $donation['id'], $status_map[ $event_type ] );
-				do_action( 'donatepress_donation_status_synced', (int) $donation['id'], $status_map[ $event_type ], 'paypal', $event_type );
-			}
+			$processor->sync_donation_status( $donation, $event_type, $donation_status_map, 'paypal' );
 		}
 
-		$subscription = null;
-		if ( ! empty( $donation['subscription_id'] ) ) {
-			$subscription = $sub_repo->find( (int) $donation['subscription_id'] );
-		}
-		if ( ! $subscription && '' !== $subscription_ref ) {
-			$subscription = $sub_repo->find_by_gateway_subscription( 'paypal', $subscription_ref );
-		}
-
+		$subscription = $processor->resolve_subscription( $donation, 'paypal', $subscription_ref );
 		$subscription_status = $this->map_subscription_status( $event_type );
+
 		if ( $subscription ) {
-			$subscription_id = (int) $subscription['id'];
-
-			if ( '' !== $subscription_ref && '' === (string) ( $subscription['gateway_subscription_id'] ?? '' ) ) {
-				$sub_repo->update_gateway_subscription_id( $subscription_id, $subscription_ref );
-			}
-
-			if ( '' !== $subscription_status ) {
-				$sub_repo->update_status( $subscription_id, $subscription_status );
-				if ( 'PAYMENT.SALE.COMPLETED' === $event_type || 'PAYMENT.CAPTURE.COMPLETED' === $event_type ) {
-					$frequency = sanitize_key( (string) ( $subscription['frequency'] ?? 'monthly' ) );
-					$next_at   = $this->next_cycle_datetime( $frequency );
-					$sub_repo->mark_payment_success( $subscription_id, $next_at );
-				} elseif ( 'PAYMENT.SALE.DENIED' === $event_type || 'PAYMENT.CAPTURE.DENIED' === $event_type || 'PAYMENT.CAPTURE.DECLINED' === $event_type ) {
-					$sub_repo->increment_failure( $subscription_id );
-					$current = $sub_repo->find( $subscription_id );
-					if ( $current ) {
-						$failure_count = (int) ( $current['failure_count'] ?? 0 );
-						$max_retries   = max( 1, (int) ( $current['max_retries'] ?? 3 ) );
-						if ( $failure_count >= $max_retries ) {
-							$sub_repo->update_status( $subscription_id, 'expired' );
-							$sub_repo->update_next_payment_at( $subscription_id, null );
-						} else {
-							$sub_repo->update_next_payment_at( $subscription_id, $this->next_retry_datetime( $failure_count ) );
-						}
-					}
-				}
-			}
+			$processor->process_subscription(
+				$subscription,
+				$subscription_ref,
+				$subscription_status,
+				array( 'PAYMENT.SALE.COMPLETED', 'PAYMENT.CAPTURE.COMPLETED' ),
+				array( 'PAYMENT.SALE.DENIED', 'PAYMENT.CAPTURE.DENIED', 'PAYMENT.CAPTURE.DECLINED' ),
+				$event_type
+			);
 		}
 
 		do_action( 'donatepress_paypal_webhook_event', $event_type, $data );
@@ -467,31 +417,22 @@ class PayPalGateway implements GatewayInterface {
 	}
 
 	/**
-	 * Resolve next scheduled renewal based on frequency.
-	 */
-	private function next_cycle_datetime( string $frequency ): string {
-		$base = current_time( 'timestamp', true );
-		if ( 'annual' === $frequency ) {
-			return gmdate( 'Y-m-d H:i:s', strtotime( '+1 year', $base ) );
-		}
-		return gmdate( 'Y-m-d H:i:s', strtotime( '+1 month', $base ) );
-	}
-
-	/**
-	 * Exponential retry backoff in hours (6, 12, 24... capped at 7d).
-	 */
-	private function next_retry_datetime( int $failure_count ): string {
-		$base          = current_time( 'timestamp', true );
-		$hours         = min( 24 * 7, max( 1, (int) pow( 2, $failure_count ) * 3 ) );
-		return gmdate( 'Y-m-d H:i:s', strtotime( '+' . $hours . ' hours', $base ) );
-	}
-
-	/**
 	 * Generate and return PayPal OAuth access token.
+	 *
+	 * Caches the token in a transient to avoid redundant OAuth requests.
 	 *
 	 * @return array<string,mixed>
 	 */
 	private function get_access_token( string $client_id, string $secret ): array {
+		$cache_key = 'dp_paypal_token_' . hash( 'sha256', $client_id . ':' . $secret );
+		$cached    = get_transient( $cache_key );
+		if ( is_string( $cached ) && '' !== $cached ) {
+			return array(
+				'success'      => true,
+				'access_token' => $cached,
+			);
+		}
+
 		$auth  = base64_encode( $client_id . ':' . $secret );
 		$args  = array(
 			'timeout' => 20,
@@ -522,9 +463,13 @@ class PayPalGateway implements GatewayInterface {
 			);
 		}
 
+		$access_token = sanitize_text_field( (string) $body['access_token'] );
+		$expires_in   = isset( $body['expires_in'] ) ? max( 60, (int) $body['expires_in'] - 120 ) : 3600;
+		set_transient( $cache_key, $access_token, $expires_in );
+
 		return array(
 			'success'      => true,
-			'access_token' => sanitize_text_field( (string) $body['access_token'] ),
+			'access_token' => $access_token,
 		);
 	}
 

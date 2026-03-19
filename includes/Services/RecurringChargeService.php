@@ -29,7 +29,7 @@ class RecurringChargeService {
 		$result = $this->payment_service->retry_subscription_charge( $gateway, $subscription );
 
 		if ( ! empty( $result['success'] ) ) {
-			$next_at = $this->next_cycle_datetime( sanitize_key( (string) ( $subscription['frequency'] ?? 'monthly' ) ) );
+			$next_at = WebhookProcessor::next_cycle_datetime( sanitize_key( (string) ( $subscription['frequency'] ?? 'monthly' ) ) );
 			$this->repository->update_status( $subscription_id, 'active' );
 			$this->repository->mark_payment_success( $subscription_id, $next_at );
 
@@ -86,7 +86,7 @@ class RecurringChargeService {
 			);
 		}
 
-		$retry_at = $this->next_retry_datetime( $failure_count );
+		$retry_at = WebhookProcessor::next_retry_datetime( $failure_count );
 		$this->repository->update_next_payment_at( $subscription_id, $retry_at );
 
 		do_action( 'donatepress_subscription_retry_failed', $subscription_id, $gateway, $result, $failure_count, $retry_at );
@@ -110,17 +110,4 @@ class RecurringChargeService {
 		);
 	}
 
-	private function next_cycle_datetime( string $frequency ): string {
-		$base = current_time( 'timestamp', true );
-		if ( 'annual' === $frequency ) {
-			return gmdate( 'Y-m-d H:i:s', strtotime( '+1 year', $base ) );
-		}
-		return gmdate( 'Y-m-d H:i:s', strtotime( '+1 month', $base ) );
-	}
-
-	private function next_retry_datetime( int $failure_count ): string {
-		$base  = current_time( 'timestamp', true );
-		$hours = min( 24 * 7, max( 1, (int) pow( 2, $failure_count ) * 3 ) );
-		return gmdate( 'Y-m-d H:i:s', strtotime( '+' . $hours . ' hours', $base ) );
-	}
 }

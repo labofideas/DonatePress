@@ -112,6 +112,16 @@ class DonationController {
 			return new WP_Error( 'invalid_amount', __( 'Amount must be greater than zero.', 'donatepress' ), array( 'status' => 422 ) );
 		}
 
+		$max_amount = (float) apply_filters( 'donatepress_max_donation_amount', 50000.00 );
+		if ( $amount > $max_amount ) {
+			return new WP_Error(
+				'amount_too_large',
+				/* translators: %s: maximum allowed donation amount */
+				sprintf( __( 'Amount exceeds the maximum of %s.', 'donatepress' ), number_format( $max_amount, 2 ) ),
+				array( 'status' => 422 )
+			);
+		}
+
 		if ( ! is_email( $email ) ) {
 			return new WP_Error( 'invalid_email', __( 'Please provide a valid email address.', 'donatepress' ), array( 'status' => 422 ) );
 		}

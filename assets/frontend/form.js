@@ -179,10 +179,12 @@
       return;
     }
 
-    content.innerHTML =
-      '<a class="dp-payment-button dp-payment-button-paypal" href="' + payment.approval_url + '">' +
-      'Continue to PayPal' +
-      '</a>';
+    var approvalLink = document.createElement('a');
+    approvalLink.className = 'dp-payment-button dp-payment-button-paypal';
+    approvalLink.href = payment.approval_url;
+    approvalLink.textContent = 'Continue to PayPal';
+    content.textContent = '';
+    content.appendChild(approvalLink);
 
     setMessage(form, 'Donation created: ' + donationNumber + '. Continue to PayPal to finish payment.', false);
   }
@@ -203,12 +205,24 @@
       return;
     }
 
-    content.innerHTML =
-      '<div class="dp-stripe-checkout">' +
-      '<div class="dp-stripe-element" data-dp-stripe-element></div>' +
-      '<button type="button" class="dp-payment-button" data-dp-stripe-confirm>Pay by Card</button>' +
-      '<p class="dp-payment-inline-message" data-dp-stripe-message></p>' +
-      '</div>';
+    var stripeCheckout = document.createElement('div');
+    stripeCheckout.className = 'dp-stripe-checkout';
+    var stripeEl = document.createElement('div');
+    stripeEl.className = 'dp-stripe-element';
+    stripeEl.setAttribute('data-dp-stripe-element', '');
+    var stripeBtn = document.createElement('button');
+    stripeBtn.type = 'button';
+    stripeBtn.className = 'dp-payment-button';
+    stripeBtn.setAttribute('data-dp-stripe-confirm', '');
+    stripeBtn.textContent = 'Pay by Card';
+    var stripeMsg = document.createElement('p');
+    stripeMsg.className = 'dp-payment-inline-message';
+    stripeMsg.setAttribute('data-dp-stripe-message', '');
+    stripeCheckout.appendChild(stripeEl);
+    stripeCheckout.appendChild(stripeBtn);
+    stripeCheckout.appendChild(stripeMsg);
+    content.textContent = '';
+    content.appendChild(stripeCheckout);
 
     loadStripeJs()
       .then(function (StripeCtor) {

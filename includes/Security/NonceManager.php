@@ -69,7 +69,7 @@ class NonceManager {
 			return false;
 		}
 
-		$ttl = (int) apply_filters( 'donatepress_form_token_ttl', DAY_IN_SECONDS * 7 );
+		$ttl = (int) apply_filters( 'donatepress_form_token_ttl', DAY_IN_SECONDS * 2 );
 		if ( time() - $timestamp > $ttl ) {
 			return false;
 		}

@@ -3,9 +3,8 @@
 namespace DonatePress\Gateways\Stripe;
 
 use DonatePress\Gateways\GatewayInterface;
-use DonatePress\Repositories\DonationRepository;
-use DonatePress\Repositories\SubscriptionRepository;
 use DonatePress\Services\SettingsService;
+use DonatePress\Services\WebhookProcessor;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -186,18 +185,16 @@ class StripeGateway implements GatewayInterface {
 		$event_id   = sanitize_text_field( (string) ( $data['id'] ?? '' ) );
 		$event_type = sanitize_text_field( (string) ( $data['type'] ?? '' ) );
 
-		if ( '' !== $event_id ) {
-			$event_lock = 'dp_wh_stripe_' . md5( $event_id );
-			if ( get_transient( $event_lock ) ) {
-				return array(
-					'success'    => true,
-					'provider'   => 'stripe',
-					'event_id'   => $event_id,
-					'event_type' => $event_type,
-					'duplicate'  => true,
-				);
-			}
-			set_transient( $event_lock, 1, DAY_IN_SECONDS );
+		$processor = WebhookProcessor::from_globals();
+
+		if ( $processor->is_duplicate_event( 'stripe', $event_id ) ) {
+			return array(
+				'success'    => true,
+				'provider'   => 'stripe',
+				'event_id'   => $event_id,
+				'event_type' => $event_type,
+				'duplicate'  => true,
+			);
 		}
 
 		$object         = $data['data']['object'] ?? array();
@@ -209,72 +206,33 @@ class StripeGateway implements GatewayInterface {
 			$subscription_ref = sanitize_text_field( (string) ( $object['id'] ?? '' ) );
 		}
 
-		global $wpdb;
-		$repo     = new DonationRepository( $wpdb );
-		$sub_repo = new SubscriptionRepository( $wpdb );
-		$donation = null;
-
-		if ( $donation_id > 0 ) {
-			$donation = $repo->find( $donation_id );
-		}
-		if ( ! $donation && '' !== $transaction_id ) {
-			$donation = $repo->find_by_gateway_transaction( $transaction_id );
-		}
+		$donation = $processor->resolve_donation( $donation_id, array( $transaction_id ) );
 
 		if ( $donation && '' !== $transaction_id ) {
-			$repo->update_gateway_transaction( (int) $donation['id'], $transaction_id );
+			$processor->update_donation_transaction( (int) $donation['id'], $transaction_id );
 		}
 
 		if ( $donation ) {
-			$status_map = array(
+			$donation_status_map = array(
 				'payment_intent.succeeded'      => 'completed',
 				'payment_intent.payment_failed' => 'failed',
 				'charge.refunded'               => 'refunded',
 			);
-
-			if ( isset( $status_map[ $event_type ] ) ) {
-				$repo->update_status( (int) $donation['id'], $status_map[ $event_type ] );
-				do_action( 'donatepress_donation_status_synced', (int) $donation['id'], $status_map[ $event_type ], 'stripe', $event_type );
-			}
+			$processor->sync_donation_status( $donation, $event_type, $donation_status_map, 'stripe' );
 		}
 
-		$subscription = null;
-		if ( ! empty( $donation['subscription_id'] ) ) {
-			$subscription = $sub_repo->find( (int) $donation['subscription_id'] );
-		}
-		if ( ! $subscription && '' !== $subscription_ref ) {
-			$subscription = $sub_repo->find_by_gateway_subscription( 'stripe', $subscription_ref );
-		}
-
+		$subscription = $processor->resolve_subscription( $donation, 'stripe', $subscription_ref );
 		$subscription_status = $this->map_subscription_status( $event_type, is_array( $object ) ? $object : array() );
+
 		if ( $subscription ) {
-			$subscription_id = (int) $subscription['id'];
-
-			if ( '' !== $subscription_ref && '' === (string) ( $subscription['gateway_subscription_id'] ?? '' ) ) {
-				$sub_repo->update_gateway_subscription_id( $subscription_id, $subscription_ref );
-			}
-
-			if ( '' !== $subscription_status ) {
-				$sub_repo->update_status( $subscription_id, $subscription_status );
-				if ( in_array( $event_type, array( 'payment_intent.succeeded', 'invoice.payment_succeeded' ), true ) ) {
-					$frequency = sanitize_key( (string) ( $subscription['frequency'] ?? 'monthly' ) );
-					$next_at   = $this->next_cycle_datetime( $frequency );
-					$sub_repo->mark_payment_success( $subscription_id, $next_at );
-				} elseif ( in_array( $event_type, array( 'payment_intent.payment_failed', 'invoice.payment_failed' ), true ) ) {
-					$sub_repo->increment_failure( $subscription_id );
-					$current = $sub_repo->find( $subscription_id );
-					if ( $current ) {
-						$failure_count = (int) ( $current['failure_count'] ?? 0 );
-						$max_retries   = max( 1, (int) ( $current['max_retries'] ?? 3 ) );
-						if ( $failure_count >= $max_retries ) {
-							$sub_repo->update_status( $subscription_id, 'expired' );
-							$sub_repo->update_next_payment_at( $subscription_id, null );
-						} else {
-							$sub_repo->update_next_payment_at( $subscription_id, $this->next_retry_datetime( $failure_count ) );
-						}
-					}
-				}
-			}
+			$processor->process_subscription(
+				$subscription,
+				$subscription_ref,
+				$subscription_status,
+				array( 'payment_intent.succeeded', 'invoice.payment_succeeded' ),
+				array( 'payment_intent.payment_failed', 'invoice.payment_failed' ),
+				$event_type
+			);
 		}
 
 		do_action( 'donatepress_stripe_webhook_event', $event_type, $data );
@@ -450,25 +408,5 @@ class StripeGateway implements GatewayInterface {
 		}
 
 		return '';
-	}
-
-	/**
-	 * Resolve next scheduled renewal based on frequency.
-	 */
-	private function next_cycle_datetime( string $frequency ): string {
-		$base = current_time( 'timestamp', true );
-		if ( 'annual' === $frequency ) {
-			return gmdate( 'Y-m-d H:i:s', strtotime( '+1 year', $base ) );
-		}
-		return gmdate( 'Y-m-d H:i:s', strtotime( '+1 month', $base ) );
-	}
-
-	/**
-	 * Exponential retry backoff in hours (6, 12, 24... capped at 7d).
-	 */
-	private function next_retry_datetime( int $failure_count ): string {
-		$base          = current_time( 'timestamp', true );
-		$hours         = min( 24 * 7, max( 1, (int) pow( 2, $failure_count ) * 3 ) );
-		return gmdate( 'Y-m-d H:i:s', strtotime( '+' . $hours . ' hours', $base ) );
 	}
 }
