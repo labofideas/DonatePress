@@ -1,0 +1,28 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 5
+    memoryLimit: 1G
+
+    paths:
+        - includes/
+        - donatepress.php
+
+    excludePaths:
+        - vendor/
+
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+
+    ignoreErrors:
+        # WooCommerce classes not available in static analysis
+        - '#Class WC_Order not found#'
+        - '#Class WC_Order_Item not found#'
+        - '#Class WC_Order_Refund not found#'
+        - '#Call to method .+ on .+WC_Order#'
+
+        # BuddyPress functions not available in static analysis
+        - '#Function bp_core_new_subnav_item not found#'
+        - '#Function bp_displayed_user_id not found#'
+        - '#Function bp_is_user not found#'

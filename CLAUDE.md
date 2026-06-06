@@ -25,6 +25,13 @@ Performance-first donation plugin for WordPress with Stripe, PayPal, recurring g
 ## Build & Test
 
 ```bash
+# Install dependencies
+composer install
+
+# Code quality (both must pass with zero errors before committing)
+vendor/bin/phpcs --standard=.phpcs.xml.dist
+vendor/bin/phpstan analyse -c phpstan.neon.dist
+
 # Smoke tests (no WordPress install needed)
 php tests/smoke-security.php
 php tests/smoke-financial.php
@@ -50,7 +57,50 @@ npm run test:e2e
 npm run test:e2e -- --headed --grep 'Donation Form|Donor Portal'
 npm run test:e2e -- --headed --grep 'Admin Settings Runtime'
 npm run test:e2e -- --headed --grep 'WooCommerce Checkout Runtime'
+
+# Build release zip
+bash bin/build-release.sh
 ```
+
+## Pre-Commit Checks (mandatory)
+
+Both must pass with zero errors before committing:
+
+```bash
+# WPCS
+vendor/bin/phpcs --standard=.phpcs.xml.dist
+
+# PHPStan
+vendor/bin/phpstan analyse -c phpstan.neon.dist
+```
+
+## Build & Release
+
+`bin/build-release.sh` produces a distributable zip with 9 verification stages:
+
+1. Clean-tree gate (no uncommitted changes)
+2. Version triangulation (plugin header, constant, and composer.json must match)
+3. PHP syntax lint on all source files
+4. Smoke test suite
+5. Staging into `dist/` via rsync (excludes dev files)
+6. Required files sanity check
+7. Staged PHP lint
+8. Zip creation
+9. Zip re-extraction and version verification
+
+## CI Pipeline
+
+GitHub Actions runs on push to `main`/`v*` branches and all PRs:
+
+| Job | What it checks |
+|-----|----------------|
+| **php-lint** | Syntax across PHP 8.0/8.1/8.2/8.3/8.4 |
+| **smoke-tests** | All smoke test scripts |
+| **phpunit** | Full matrix: PHP 8.0–8.3 with MySQL 8.0 |
+| **phpstan** | Static analysis, zero errors required |
+| **wpcs** | Coding standards, zero errors required |
+
+All jobs must pass before merge.
 
 ## Architecture Overview
 

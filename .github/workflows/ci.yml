@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'v*']
+  pull_request:
+
+jobs:
+  php-lint:
+    name: PHP Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.0', '8.1', '8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+      - name: Lint PHP files
+        run: find includes/ -name "*.php" -exec php -l {} \; && php -l donatepress.php && php -l uninstall.php
+
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    needs: php-lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Run smoke tests
+        run: |
+          for f in tests/smoke-*.php; do
+            echo "Running $f..."
+            php "$f"
+          done
+
+  phpunit:
+    name: PHPUnit (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    needs: php-lint
+    strategy:
+      matrix:
+        php: ['8.0', '8.1', '8.2', '8.3']
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wp_tests
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli
+      - name: Install Composer dependencies
+        run: composer install --no-progress --prefer-dist
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    needs: php-lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Install Composer dependencies
+        run: composer install --no-progress --prefer-dist
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse -c phpstan.neon.dist --no-progress
+
+  wpcs:
+    name: WPCS
+    runs-on: ubuntu-latest
+    needs: php-lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Install Composer dependencies
+        run: composer install --no-progress --prefer-dist
+      - name: Run PHPCS
+        run: vendor/bin/phpcs --standard=.phpcs.xml.dist

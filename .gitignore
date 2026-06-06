@@ -1,7 +1,10 @@
 node_modules/
+vendor/
+dist/
 test-results/
 playwright-report/
 tests/e2e/tests/e2e/report/
+.phpunit.result.cache
 .DS_Store
 *.log
-vendor/
+.env
