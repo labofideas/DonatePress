@@ -242,6 +242,26 @@ class SubscriptionRepository {
 	}
 
 	/**
+	 * List all subscriptions for export.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function list_all(): array {
+		$table = $this->db->prefix . 'dp_subscriptions';
+
+		$rows = $this->db->get_results(
+			"SELECT subscription_number, gateway, gateway_subscription_id, amount, currency,
+				frequency, status, failure_count, max_retries, next_payment_at,
+				last_payment_at, created_at
+			FROM {$table}
+			ORDER BY created_at DESC",
+			ARRAY_A
+		);
+
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
 	 * List subscriptions by donor email (via initial donation relation).
 	 *
 	 * @return array<int,array<string,mixed>>

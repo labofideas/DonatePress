@@ -210,6 +210,25 @@ class DonorRepository {
 	}
 
 	/**
+	 * List all donors for export.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function list_all(): array {
+		$table = $this->db->prefix . 'dp_donors';
+
+		$rows = $this->db->get_results(
+			"SELECT email, first_name, last_name, phone, total_donated, donation_count,
+				status, created_at
+			FROM {$table}
+			ORDER BY created_at DESC",
+			ARRAY_A
+		);
+
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
 	 * List donors with paging/filter.
 	 *
 	 * @return array<int,array<string,mixed>>

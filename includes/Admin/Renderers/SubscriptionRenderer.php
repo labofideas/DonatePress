@@ -81,7 +81,8 @@ class SubscriptionRenderer {
 			),
 			$table_rows,
 			__( 'No subscriptions found yet.', 'donatepress' ),
-			array( 4 )
+			array( 4 ),
+			'donatepress_export_subscriptions'
 		);
 	}
 
@@ -132,14 +133,24 @@ class SubscriptionRenderer {
 	 * @param array<int,array<int,string>>    $rows           Table row data.
 	 * @param string                          $empty_message  Shown when rows is empty.
 	 * @param array<int,int>                  $badge_columns  Column indices to render as status badges.
+	 * @param string                          $export_action  Admin-post action for CSV export.
 	 */
-	private function render_data_page( string $title, string $message, array $metrics, array $columns, array $rows, string $empty_message, array $badge_columns = array() ): void {
+	private function render_data_page( string $title, string $message, array $metrics, array $columns, array $rows, string $empty_message, array $badge_columns = array(), string $export_action = '' ): void {
 		?>
 		<div class="wrap donatepress-admin">
 			<div class="dp-card">
-				<div class="dp-card-head">
-					<h2><?php echo esc_html( $title ); ?></h2>
-					<p><?php echo esc_html( $message ); ?></p>
+				<div class="dp-card-toolbar">
+					<div class="dp-card-head">
+						<h2><?php echo esc_html( $title ); ?></h2>
+						<p><?php echo esc_html( $message ); ?></p>
+					</div>
+					<?php if ( '' !== $export_action ) : ?>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<input type="hidden" name="action" value="<?php echo esc_attr( $export_action ); ?>" />
+							<?php wp_nonce_field( $export_action ); ?>
+							<?php submit_button( __( 'Export CSV', 'donatepress' ), 'secondary', 'submit', false ); ?>
+						</form>
+					<?php endif; ?>
 				</div>
 
 				<?php if ( ! empty( $metrics ) ) : ?>

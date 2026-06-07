@@ -43,6 +43,11 @@ class SettingsPage {
 		$campaign_handler = new Handlers\CampaignHandler( $this->db() );
 		add_action( 'admin_post_donatepress_save_campaign', array( $campaign_handler, 'save' ) );
 		add_action( 'admin_post_donatepress_delete_campaign', array( $campaign_handler, 'delete' ) );
+
+		$export_handler = new Handlers\ExportHandler( $this->db() );
+		add_action( 'admin_post_donatepress_export_donations', array( $export_handler, 'export_donations' ) );
+		add_action( 'admin_post_donatepress_export_donors', array( $export_handler, 'export_donors' ) );
+		add_action( 'admin_post_donatepress_export_subscriptions', array( $export_handler, 'export_subscriptions' ) );
 	}
 
 	/**

@@ -183,6 +183,26 @@ class DonationRepository {
 	}
 
 	/**
+	 * List all donations for export.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function list_all(): array {
+		$table = $this->db->prefix . 'dp_donations';
+
+		$rows = $this->db->get_results(
+			"SELECT donation_number, donor_email, donor_first_name, donor_last_name,
+				amount, currency, gateway, gateway_transaction_id, is_recurring,
+				recurring_frequency, status, donor_comment, donated_at
+			FROM {$table}
+			ORDER BY donated_at DESC",
+			ARRAY_A
+		);
+
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
 	 * Donation count by status.
 	 */
 	public function count_by_status( string $status ): int {
