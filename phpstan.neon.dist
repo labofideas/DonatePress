@@ -3,7 +3,6 @@ includes:
 
 parameters:
     level: 5
-    memoryLimit: 1G
 
     paths:
         - includes/
@@ -14,6 +13,8 @@ parameters:
 
     bootstrapFiles:
         - phpstan-bootstrap.php
+
+    reportUnmatchedIgnoredErrors: false
 
     ignoreErrors:
         # WooCommerce classes not available in static analysis

@@ -83,7 +83,8 @@ class DonationRenderer {
 				__( 'Date', 'donatepress' ),
 			),
 			$table_rows,
-			__( 'No donations found yet.', 'donatepress' )
+			__( 'No donations found yet.', 'donatepress' ),
+			array( 4 )
 		);
 	}
 
@@ -127,14 +128,15 @@ class DonationRenderer {
 	/**
 	 * Render common data page shell.
 	 *
-	 * @param string                          $title         Page title.
-	 * @param string                          $message       Page description.
-	 * @param array<int,array<string,string>> $metrics       Metric cards.
-	 * @param array<int,string>               $columns       Table column headers.
-	 * @param array<int,array<int,string>>    $rows          Table row data.
-	 * @param string                          $empty_message Shown when rows is empty.
+	 * @param string                          $title          Page title.
+	 * @param string                          $message        Page description.
+	 * @param array<int,array<string,string>> $metrics        Metric cards.
+	 * @param array<int,string>               $columns        Table column headers.
+	 * @param array<int,array<int,string>>    $rows           Table row data.
+	 * @param string                          $empty_message  Shown when rows is empty.
+	 * @param array<int,int>                  $badge_columns  Column indices to render as status badges.
 	 */
-	private function render_data_page( string $title, string $message, array $metrics, array $columns, array $rows, string $empty_message ): void {
+	private function render_data_page( string $title, string $message, array $metrics, array $columns, array $rows, string $empty_message, array $badge_columns = array() ): void {
 		?>
 		<div class="wrap donatepress-admin">
 			<div class="dp-card">
@@ -171,8 +173,12 @@ class DonationRenderer {
 							<?php else : ?>
 								<?php foreach ( $rows as $row ) : ?>
 									<tr>
-										<?php foreach ( $row as $value ) : ?>
-											<td><?php echo esc_html( $value ); ?></td>
+										<?php foreach ( $row as $col_idx => $value ) : ?>
+											<?php if ( in_array( $col_idx, $badge_columns, true ) ) : ?>
+												<td><span class="dp-badge dp-badge-<?php echo esc_attr( strtolower( $value ) ); ?>"><?php echo esc_html( $value ); ?></span></td>
+											<?php else : ?>
+												<td><?php echo esc_html( $value ); ?></td>
+											<?php endif; ?>
 										<?php endforeach; ?>
 									</tr>
 								<?php endforeach; ?>

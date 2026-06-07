@@ -139,7 +139,7 @@ class FormRenderer {
 										<td><?php echo esc_html( (string) $row['slug'] ); ?></td>
 										<td><?php echo esc_html( $this->format_money( (float) $row['default_amount'], strtoupper( (string) $row['currency'] ) ) ); ?></td>
 										<td><?php echo esc_html( ucfirst( sanitize_text_field( (string) $row['gateway'] ) ) ); ?></td>
-										<td><?php echo esc_html( ucfirst( sanitize_text_field( (string) $row['status'] ) ) ); ?></td>
+										<td><span class="dp-badge dp-badge-<?php echo esc_attr( sanitize_text_field( (string) $row['status'] ) ); ?>"><?php echo esc_html( ucfirst( sanitize_text_field( (string) $row['status'] ) ) ); ?></span></td>
 										<td><?php echo esc_html( $this->format_datetime( (string) $row['created_at'] ) ); ?></td>
 										<td>
 											<div class="dp-table-actions">

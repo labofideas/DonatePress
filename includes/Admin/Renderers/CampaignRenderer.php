@@ -137,7 +137,7 @@ class CampaignRenderer {
 												<button type="button" class="button button-secondary" data-copy-target="<?php echo esc_attr( $input_id ); ?>"><?php echo esc_html__( 'Copy', 'donatepress' ); ?></button>
 											</div>
 										</td>
-										<td><?php echo esc_html( ucfirst( sanitize_text_field( (string) $row['status'] ) ) ); ?></td>
+										<td><span class="dp-badge dp-badge-<?php echo esc_attr( sanitize_text_field( (string) $row['status'] ) ); ?>"><?php echo esc_html( ucfirst( sanitize_text_field( (string) $row['status'] ) ) ); ?></span></td>
 										<td><?php echo esc_html( $this->format_datetime( (string) $row['created_at'] ) ); ?></td>
 										<td>
 											<div class="dp-table-actions">
