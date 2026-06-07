@@ -2,6 +2,8 @@
 
 namespace DonatePress\Integrations;
 
+use DonatePress\Repositories\DonationRepository;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -96,26 +98,15 @@ class BuddyPressIntegration {
 			return;
 		}
 
-		global $wpdb;
-		$table = $wpdb->prefix . 'dp_donations';
 		$limit = (int) apply_filters( 'donatepress_bp_profile_donations_limit', 20 );
 		if ( $limit < 1 ) {
 			$limit = 20;
 		}
 		$limit = min( $limit, 100 );
 
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT donation_number, amount, currency, status, donated_at
-				 FROM {$table}
-				 WHERE donor_email = %s
-				 ORDER BY donated_at DESC
-				 LIMIT %d",
-				$user->user_email,
-				$limit
-			),
-			ARRAY_A
-		);
+		global $wpdb;
+		$repository = new DonationRepository( $wpdb );
+		$rows       = $repository->list_by_email( $user->user_email, $limit );
 
 		echo '<div class="donatepress-bp-profile">';
 		echo '<h2>' . esc_html__( 'Donation History', 'donatepress' ) . '</h2>';

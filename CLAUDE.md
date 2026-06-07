@@ -116,7 +116,8 @@ includes/
   Gateways/              → GatewayInterface + Stripe, PayPal, Offline implementations
   Security/              → RateLimiter, NonceManager, CapabilityManager
   Frontend/              → Shortcodes (Form, Campaign, Portal) + Gutenberg block
-  Admin/                 → SettingsPage (admin UI shell)
+  Admin/                 → SettingsPage (menus, settings, rendering)
+    Handlers/            → FormHandler, CampaignHandler (CRUD actions)
   Integrations/          → WooCommerce, BuddyPress
 assets/
   admin/                 → Admin JS/CSS (settings, setup wizard)
@@ -219,7 +220,33 @@ interface GatewayInterface {
 
 ### Settings
 
-All plugin settings live in one option: `get_option( 'donatepress_settings', [] )`. Never create separate `donatepress_*` options for individual settings. Use `SettingsService` to read settings with defaults.
+All plugin settings live in one option: `get_option( 'donatepress_settings', [] )`. Never create separate `donatepress_*` options for individual settings. Use `SettingsService` to read and write settings with built-in sanitization.
+
+```php
+// Read
+$service = new SettingsService();
+$currency = $service->get( 'base_currency', 'USD' );
+
+// Write (sanitizes all values)
+$service->update( array( 'base_currency' => 'EUR' ) );
+```
+
+### Admin Architecture
+
+`SettingsPage` handles menus, settings registration, and page rendering only (max 750 lines). CRUD action handlers live in `Admin\Handlers\*Handler` classes (max 400 lines each). Never add POST/form handlers directly to `SettingsPage`.
+
+```php
+// Correct — handler class
+class FormHandler {
+    public function save(): void { ... }
+    public function delete(): void { ... }
+}
+
+// Wrong — handler method inside SettingsPage
+class SettingsPage {
+    public function handle_save_form(): void { ... }  // too much responsibility
+}
+```
 
 ### Webhook Processing
 
@@ -277,6 +304,8 @@ Things to avoid in this codebase:
 - `md5()` for security hashing — use `hash( 'sha256', ... )`
 - Duplicate business logic across gateways — extract to `WebhookProcessor`
 - Hardcoded rate limits — use filters (`donatepress_submission_rate_limit`, etc.)
+- CRUD action handlers inside `SettingsPage` — use `Admin\Handlers\*Handler` classes
+- Bypassing `SettingsService::update()` for programmatic writes — always use the service
 - Committing test artifacts, node_modules, or vendor/
 
 ## Extension Points

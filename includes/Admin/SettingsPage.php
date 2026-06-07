@@ -32,10 +32,14 @@ class SettingsPage {
 		add_action( 'admin_notices', array( $this, 'render_setup_notice' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'admin_post_donatepress_demo_import', array( $this, 'handle_demo_import' ) );
-		add_action( 'admin_post_donatepress_save_form', array( $this, 'handle_save_form' ) );
-		add_action( 'admin_post_donatepress_delete_form', array( $this, 'handle_delete_form' ) );
-		add_action( 'admin_post_donatepress_save_campaign', array( $this, 'handle_save_campaign' ) );
-		add_action( 'admin_post_donatepress_delete_campaign', array( $this, 'handle_delete_campaign' ) );
+
+		$form_handler = new Handlers\FormHandler( $this->db() );
+		add_action( 'admin_post_donatepress_save_form', array( $form_handler, 'save' ) );
+		add_action( 'admin_post_donatepress_delete_form', array( $form_handler, 'delete' ) );
+
+		$campaign_handler = new Handlers\CampaignHandler( $this->db() );
+		add_action( 'admin_post_donatepress_save_campaign', array( $campaign_handler, 'save' ) );
+		add_action( 'admin_post_donatepress_delete_campaign', array( $campaign_handler, 'delete' ) );
 	}
 
 	/**
@@ -1114,80 +1118,6 @@ class SettingsPage {
 		exit;
 	}
 
-	/**
-	 * Save or update a form.
-	 */
-	public function handle_save_form(): void {
-		$this->assert_admin_access( 'admin.forms' );
-		check_admin_referer( 'donatepress_save_form' );
-
-		$repository = new FormRepository( $this->db() );
-		$form_id    = isset( $_POST['form_id'] ) ? absint( wp_unslash( $_POST['form_id'] ) ) : 0;
-		$data       = array(
-			'title'          => sanitize_text_field( wp_unslash( $_POST['form_title'] ?? '' ) ),
-			'slug'           => sanitize_title( wp_unslash( $_POST['form_slug'] ?? '' ) ),
-			'default_amount' => isset( $_POST['form_default_amount'] ) ? (float) wp_unslash( $_POST['form_default_amount'] ) : 25,
-			'currency'       => sanitize_text_field( wp_unslash( $_POST['form_currency'] ?? 'USD' ) ),
-			'gateway'        => sanitize_key( wp_unslash( $_POST['form_gateway'] ?? 'stripe' ) ),
-			'status'         => sanitize_key( wp_unslash( $_POST['form_status'] ?? 'active' ) ),
-		);
-
-		if ( '' === $data['title'] || $data['default_amount'] <= 0 ) {
-			$this->redirect_with_result( 'donatepress-forms', 'forms', 'invalid' );
-		}
-
-		$success = $form_id > 0 ? $repository->update( $form_id, $data ) : $repository->insert( $data ) > 0;
-		$this->redirect_with_result( 'donatepress-forms', 'forms', $success ? 'saved' : 'failed' );
-	}
-
-	/**
-	 * Delete a form.
-	 */
-	public function handle_delete_form(): void {
-		$this->assert_admin_access( 'admin.forms' );
-		$form_id = isset( $_GET['form_id'] ) ? absint( wp_unslash( $_GET['form_id'] ) ) : 0;
-		check_admin_referer( 'donatepress_delete_form_' . $form_id );
-		$success = $form_id > 0 ? ( new FormRepository( $this->db() ) )->delete( $form_id ) : false;
-		$this->redirect_with_result( 'donatepress-forms', 'forms', $success ? 'deleted' : 'failed' );
-	}
-
-	/**
-	 * Save or update a campaign.
-	 */
-	public function handle_save_campaign(): void {
-		$this->assert_admin_access( 'admin.campaigns' );
-		check_admin_referer( 'donatepress_save_campaign' );
-
-		$repository  = new CampaignRepository( $this->db() );
-		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( wp_unslash( $_POST['campaign_id'] ) ) : 0;
-		$data        = array(
-			'title'         => sanitize_text_field( wp_unslash( $_POST['campaign_title'] ?? '' ) ),
-			'slug'          => sanitize_title( wp_unslash( $_POST['campaign_slug'] ?? '' ) ),
-			'description'   => sanitize_textarea_field( wp_unslash( $_POST['campaign_description'] ?? '' ) ),
-			'goal_amount'   => '' !== (string) ( $_POST['campaign_goal_amount'] ?? '' ) ? (float) wp_unslash( $_POST['campaign_goal_amount'] ) : null,
-			'raised_amount' => isset( $_POST['campaign_raised_amount'] ) ? (float) wp_unslash( $_POST['campaign_raised_amount'] ) : 0,
-			'status'        => sanitize_key( wp_unslash( $_POST['campaign_status'] ?? 'draft' ) ),
-		);
-
-		if ( '' === $data['title'] || ( null !== $data['goal_amount'] && $data['goal_amount'] < 0 ) || $data['raised_amount'] < 0 ) {
-			$this->redirect_with_result( 'donatepress-campaigns', 'campaigns', 'invalid' );
-		}
-
-		$success = $campaign_id > 0 ? $repository->update( $campaign_id, $data ) : $repository->insert( $data ) > 0;
-		$this->redirect_with_result( 'donatepress-campaigns', 'campaigns', $success ? 'saved' : 'failed' );
-	}
-
-	/**
-	 * Delete a campaign.
-	 */
-	public function handle_delete_campaign(): void {
-		$this->assert_admin_access( 'admin.campaigns' );
-		$campaign_id = isset( $_GET['campaign_id'] ) ? absint( wp_unslash( $_GET['campaign_id'] ) ) : 0;
-		check_admin_referer( 'donatepress_delete_campaign_' . $campaign_id );
-		$success = $campaign_id > 0 ? ( new CampaignRepository( $this->db() ) )->delete( $campaign_id ) : false;
-		$this->redirect_with_result( 'donatepress-campaigns', 'campaigns', $success ? 'deleted' : 'failed' );
-	}
-
 	private function required_fields(): array {
 		$fields = array(
 			'organization_name',
@@ -1247,31 +1177,6 @@ class SettingsPage {
 	private function can_access( string $scope ): bool {
 		$manager = new CapabilityManager();
 		return $manager->can( $scope );
-	}
-
-	/**
-	 * Stop execution when the current user lacks access.
-	 */
-	private function assert_admin_access( string $scope ): void {
-		if ( ! $this->can_access( $scope ) ) {
-			wp_die( esc_html__( 'You are not allowed to access this DonatePress screen.', 'donatepress' ) );
-		}
-	}
-
-	/**
-	 * Redirect back to an admin page with a compact result flag.
-	 */
-	private function redirect_with_result( string $page, string $key, string $result ): void {
-		wp_safe_redirect(
-			add_query_arg(
-				array(
-					'page'   => $page,
-					$key     => $result,
-				),
-				admin_url( 'admin.php' )
-			)
-		);
-		exit;
 	}
 
 	/**
