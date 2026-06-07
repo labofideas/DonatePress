@@ -14,6 +14,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Renders the admin Demo Import page and handles the import action.
  */
 class DemoImportRenderer {
+	/**
+	 * WordPress database instance.
+	 *
+	 * @var wpdb
+	 */
 	private wpdb $wpdb;
 
 	public function __construct( wpdb $wpdb ) {
@@ -111,7 +116,7 @@ class DemoImportRenderer {
 					<div class="dp-link-list">
 						<?php foreach ( (array) ( $status['pages'] ?? array() ) as $page_id ) : ?>
 							<?php if ( get_post_status( (int) $page_id ) ) : ?>
-								<a href="<?php echo esc_url( get_permalink( (int) $page_id ) ?: '#' ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( get_the_title( (int) $page_id ) ); ?></a>
+								<a href="<?php echo esc_url( get_permalink( (int) $page_id ) ? get_permalink( (int) $page_id ) : '#' ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( get_the_title( (int) $page_id ) ); ?></a>
 							<?php endif; ?>
 						<?php endforeach; ?>
 					</div>
@@ -161,6 +166,8 @@ class DemoImportRenderer {
 
 	/**
 	 * Verify access for one admin scope.
+	 *
+	 * @param string $scope Admin scope identifier.
 	 */
 	private function can_access( string $scope ): bool {
 		return ( new CapabilityManager() )->can( $scope );

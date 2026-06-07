@@ -151,6 +151,8 @@ class SettingsPage {
 
 	/**
 	 * Load page-specific assets.
+	 *
+	 * @param string $hook Current admin page hook suffix.
 	 */
 	public function enqueue_assets( string $hook ): void {
 		if ( false === strpos( $hook, 'donatepress' ) ) {
@@ -540,6 +542,8 @@ class SettingsPage {
 
 	/**
 	 * Resolve capability string for one admin scope.
+	 *
+	 * @param string $scope Admin scope identifier.
 	 */
 	private function capability( string $scope ): string {
 		$manager = new CapabilityManager();
@@ -549,6 +553,8 @@ class SettingsPage {
 
 	/**
 	 * Verify access for one admin scope.
+	 *
+	 * @param string $scope Admin scope identifier.
 	 */
 	private function can_access( string $scope ): bool {
 		$manager = new CapabilityManager();
@@ -605,6 +611,7 @@ class SettingsPage {
 	 *
 	 * @param array<string,mixed> $input   Raw input.
 	 * @param array<string,mixed> $current Current stored settings.
+	 * @param string              $key     Setting key for the secret field.
 	 */
 	private function resolve_secret_value( array $input, array $current, string $key ): string {
 		$incoming = isset( $input[ $key ] ) ? trim( (string) $input[ $key ] ) : '';
@@ -617,6 +624,7 @@ class SettingsPage {
 	/**
 	 * Read a setting with safe default.
 	 *
+	 * @param string $key Setting key.
 	 * @return mixed
 	 */
 	private function get_setting( string $key ) {

@@ -14,6 +14,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Renders the admin Forms list and edit page.
  */
 class FormRenderer {
+	/**
+	 * WordPress database instance.
+	 *
+	 * @var wpdb
+	 */
 	private wpdb $wpdb;
 
 	public function __construct( wpdb $wpdb ) {
@@ -170,6 +175,8 @@ class FormRenderer {
 
 	/**
 	 * Verify access for one admin scope.
+	 *
+	 * @param string $scope Admin scope identifier.
 	 */
 	private function can_access( string $scope ): bool {
 		return ( new CapabilityManager() )->can( $scope );
@@ -177,6 +184,9 @@ class FormRenderer {
 
 	/**
 	 * Format money for admin screens.
+	 *
+	 * @param float  $amount   Numeric amount.
+	 * @param string $currency ISO currency code.
 	 */
 	private function format_money( float $amount, string $currency = 'USD' ): string {
 		return strtoupper( sanitize_text_field( $currency ) ) . ' ' . number_format_i18n( $amount, 2 );
@@ -184,6 +194,8 @@ class FormRenderer {
 
 	/**
 	 * Format UTC datetime string for admin display.
+	 *
+	 * @param string $datetime UTC datetime string.
 	 */
 	private function format_datetime( string $datetime ): string {
 		if ( '' === $datetime || '0000-00-00 00:00:00' === $datetime ) {
@@ -200,6 +212,8 @@ class FormRenderer {
 
 	/**
 	 * Render success/error notices for inline admin CRUD.
+	 *
+	 * @param string $key Query parameter key for the notice result.
 	 */
 	private function render_action_notice( string $key ): void {
 		$result = isset( $_GET[ $key ] ) ? sanitize_key( wp_unslash( $_GET[ $key ] ) ) : '';
@@ -225,6 +239,13 @@ class FormRenderer {
 
 	/**
 	 * Render a simple admin text field.
+	 *
+	 * @param string $name     Input name attribute.
+	 * @param string $label    Label text.
+	 * @param string $value    Current value.
+	 * @param bool   $required Whether the field is required.
+	 * @param string $type     Input type attribute.
+	 * @param string $step     Step attribute for number inputs.
 	 */
 	private function render_admin_text_control( string $name, string $label, string $value, bool $required = false, string $type = 'text', string $step = '' ): void {
 		echo '<div class="dp-field">';
@@ -240,7 +261,10 @@ class FormRenderer {
 	/**
 	 * Render a simple admin select field.
 	 *
-	 * @param array<string,string> $options
+	 * @param string               $name    Input name attribute.
+	 * @param string               $label   Label text.
+	 * @param string               $value   Currently selected value.
+	 * @param array<string,string> $options Option value-label pairs.
 	 */
 	private function render_admin_select_control( string $name, string $label, string $value, array $options ): void {
 		echo '<div class="dp-field">';
@@ -256,6 +280,7 @@ class FormRenderer {
 	/**
 	 * Parse search/status/page filters for list screens.
 	 *
+	 * @param string $prefix Query parameter prefix.
 	 * @return array{search:string,status:string,page:int,offset:int}
 	 */
 	private function list_filters( string $prefix ): array {
@@ -274,7 +299,11 @@ class FormRenderer {
 	/**
 	 * Render list search/filter controls.
 	 *
-	 * @param array<string,string> $status_options
+	 * @param string               $page           Admin page slug.
+	 * @param string               $prefix         Query parameter prefix.
+	 * @param string               $search         Current search value.
+	 * @param string               $status         Current status filter.
+	 * @param array<string,string> $status_options Status option value-label pairs.
 	 */
 	private function render_list_filters( string $page, string $prefix, string $search, string $status, array $status_options ): void {
 		echo '<form method="get" class="dp-list-filters">';
@@ -295,7 +324,12 @@ class FormRenderer {
 	/**
 	 * Render lightweight pagination.
 	 *
-	 * @param array<string,int|null> $extra_args
+	 * @param string                 $page         Admin page slug.
+	 * @param string                 $prefix       Query parameter prefix.
+	 * @param int                    $current_page Current page number.
+	 * @param int                    $per_page     Rows per page.
+	 * @param int                    $total_rows   Total number of rows.
+	 * @param array<string,int|null> $extra_args   Additional query args.
 	 */
 	private function render_pagination( string $page, string $prefix, int $current_page, int $per_page, int $total_rows, array $extra_args = array() ): void {
 		$total_pages = max( 1, (int) ceil( $total_rows / $per_page ) );
