@@ -2,11 +2,13 @@
 
 namespace DonatePress\Admin;
 
-use DonatePress\Repositories\CampaignRepository;
-use DonatePress\Repositories\DonationRepository;
-use DonatePress\Repositories\DonorRepository;
-use DonatePress\Repositories\FormRepository;
-use DonatePress\Repositories\SubscriptionRepository;
+use DonatePress\Admin\Renderers\CampaignRenderer;
+use DonatePress\Admin\Renderers\DemoImportRenderer;
+use DonatePress\Admin\Renderers\DonationRenderer;
+use DonatePress\Admin\Renderers\DonorRenderer;
+use DonatePress\Admin\Renderers\FormRenderer;
+use DonatePress\Admin\Renderers\ReportRenderer;
+use DonatePress\Admin\Renderers\SubscriptionRenderer;
 use DonatePress\Security\CapabilityManager;
 use DonatePress\Services\DemoImportService;
 use DonatePress\Services\SetupWizardService;
@@ -31,7 +33,8 @@ class SettingsPage {
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_notices', array( $this, 'render_setup_notice' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
-		add_action( 'admin_post_donatepress_demo_import', array( $this, 'handle_demo_import' ) );
+		$demo_renderer = new DemoImportRenderer( $this->db() );
+		add_action( 'admin_post_donatepress_demo_import', array( $demo_renderer, 'handle_demo_import' ) );
 
 		$form_handler = new Handlers\FormHandler( $this->db() );
 		add_action( 'admin_post_donatepress_save_form', array( $form_handler, 'save' ) );
@@ -46,6 +49,14 @@ class SettingsPage {
 	 * Add admin menu pages.
 	 */
 	public function register_menu(): void {
+		$donation_renderer     = new DonationRenderer( $this->db() );
+		$donor_renderer        = new DonorRenderer( $this->db() );
+		$form_renderer         = new FormRenderer( $this->db() );
+		$campaign_renderer     = new CampaignRenderer( $this->db() );
+		$subscription_renderer = new SubscriptionRenderer( $this->db() );
+		$report_renderer       = new ReportRenderer( $this->db() );
+		$demo_renderer         = new DemoImportRenderer( $this->db() );
+
 		add_menu_page(
 			__( 'DonatePress', 'donatepress' ),
 			__( 'DonatePress', 'donatepress' ),
@@ -80,7 +91,7 @@ class SettingsPage {
 			__( 'Demo Import', 'donatepress' ),
 			$this->capability( 'admin.setup' ),
 			'donatepress-demo-import',
-			array( $this, 'render_demo_import_page' )
+			array( $demo_renderer, 'render' )
 		);
 
 		add_submenu_page(
@@ -89,7 +100,7 @@ class SettingsPage {
 			__( 'Donations', 'donatepress' ),
 			$this->capability( 'admin.donations' ),
 			'donatepress-donations',
-			array( $this, 'render_donations_page' )
+			array( $donation_renderer, 'render' )
 		);
 
 		add_submenu_page(
@@ -98,7 +109,7 @@ class SettingsPage {
 			__( 'Donors', 'donatepress' ),
 			$this->capability( 'admin.donors' ),
 			'donatepress-donors',
-			array( $this, 'render_donors_page' )
+			array( $donor_renderer, 'render' )
 		);
 
 		add_submenu_page(
@@ -107,7 +118,7 @@ class SettingsPage {
 			__( 'Forms', 'donatepress' ),
 			$this->capability( 'admin.forms' ),
 			'donatepress-forms',
-			array( $this, 'render_forms_page' )
+			array( $form_renderer, 'render' )
 		);
 
 		add_submenu_page(
@@ -116,7 +127,7 @@ class SettingsPage {
 			__( 'Campaigns', 'donatepress' ),
 			$this->capability( 'admin.campaigns' ),
 			'donatepress-campaigns',
-			array( $this, 'render_campaigns_page' )
+			array( $campaign_renderer, 'render' )
 		);
 
 		add_submenu_page(
@@ -125,7 +136,7 @@ class SettingsPage {
 			__( 'Reports', 'donatepress' ),
 			$this->capability( 'admin.reports' ),
 			'donatepress-reports',
-			array( $this, 'render_reports_page' )
+			array( $report_renderer, 'render' )
 		);
 
 		add_submenu_page(
@@ -134,7 +145,7 @@ class SettingsPage {
 			__( 'Subscriptions', 'donatepress' ),
 			$this->capability( 'admin.subscriptions' ),
 			'donatepress-subscriptions',
-			array( $this, 'render_subscriptions_page' )
+			array( $subscription_renderer, 'render' )
 		);
 	}
 
@@ -376,621 +387,6 @@ class SettingsPage {
 	}
 
 	/**
-	 * Render demo import onboarding page.
-	 */
-	public function render_demo_import_page(): void {
-		if ( ! $this->can_access( 'admin.setup' ) ) {
-			return;
-		}
-
-		$service = new DemoImportService();
-		$status  = $service->status();
-		?>
-		<div class="wrap donatepress-admin">
-			<div class="donatepress-hero">
-				<div>
-					<p class="donatepress-eyebrow"><?php echo esc_html__( 'First Run', 'donatepress' ); ?></p>
-					<h1><?php echo esc_html__( 'Import Demo Content', 'donatepress' ); ?></h1>
-					<p><?php echo esc_html__( 'Create a complete starter experience with frontend pages, a demo campaign, a donation form, and a navigation menu so new users can understand the plugin before they configure every setting.', 'donatepress' ); ?></p>
-						<div class="dp-hero-actions">
-							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-								<input type="hidden" name="action" value="donatepress_demo_import" />
-								<?php wp_nonce_field( 'donatepress_demo_import' ); ?>
-								<select name="menu_location">
-									<option value=""><?php echo esc_html__( 'Assign only if a location is empty', 'donatepress' ); ?></option>
-									<?php foreach ( $this->available_menu_locations() as $location_key => $label ) : ?>
-										<option value="<?php echo esc_attr( $location_key ); ?>"><?php echo esc_html( $label . ' (' . $location_key . ')' ); ?></option>
-									<?php endforeach; ?>
-								</select>
-								<?php submit_button( empty( $status['has_import'] ) ? __( 'Run Demo Import', 'donatepress' ) : __( 'Re-run Demo Import', 'donatepress' ), 'primary', 'submit', false ); ?>
-							</form>
-							<a class="button button-secondary" href="<?php echo esc_url( admin_url( 'admin.php?page=donatepress-setup' ) ); ?>"><?php echo esc_html__( 'Open Setup Wizard', 'donatepress' ); ?></a>
-					</div>
-				</div>
-				<div class="donatepress-status-card <?php echo ! empty( $status['has_import'] ) ? 'is-good' : 'is-warning'; ?>">
-					<p class="label"><?php echo esc_html__( 'Demo Status', 'donatepress' ); ?></p>
-					<p class="value"><?php echo ! empty( $status['has_import'] ) ? esc_html__( 'Ready', 'donatepress' ) : esc_html__( 'Pending', 'donatepress' ); ?></p>
-					<p class="hint">
-						<?php
-						echo ! empty( $status['has_import'] )
-							? esc_html__( 'Starter pages and menu links are available.', 'donatepress' )
-							: esc_html__( 'Import once to create a realistic starter site structure.', 'donatepress' );
-						?>
-					</p>
-				</div>
-			</div>
-
-			<?php if ( isset( $_GET['demo-import'] ) ) : ?>
-				<?php $result = sanitize_key( wp_unslash( $_GET['demo-import'] ) ); ?>
-				<?php $error_message = isset( $_GET['message'] ) ? sanitize_text_field( wp_unslash( $_GET['message'] ) ) : __( 'Demo import failed.', 'donatepress' ); ?>
-				<?php if ( 'success' === $result ) : ?>
-					<div class="notice notice-success is-dismissible"><p><?php echo esc_html__( 'Demo content imported successfully.', 'donatepress' ); ?></p></div>
-				<?php elseif ( 'failed' === $result ) : ?>
-					<div class="notice notice-error"><p><?php echo esc_html( $error_message ); ?></p></div>
-				<?php endif; ?>
-			<?php endif; ?>
-
-			<div class="dp-grid two-col dp-stack-top">
-				<div class="dp-card">
-					<div class="dp-card-head">
-						<h2><?php echo esc_html__( 'What gets created', 'donatepress' ); ?></h2>
-						<p><?php echo esc_html__( 'The import is safe to re-run. Existing DonatePress demo pages are updated in place instead of duplicated.', 'donatepress' ); ?></p>
-					</div>
-					<ul class="dp-check-list">
-						<li><?php echo esc_html__( 'A ready-to-use donation form', 'donatepress' ); ?></li>
-						<li><?php echo esc_html__( 'A sample campaign with goal and progress', 'donatepress' ); ?></li>
-						<li><?php echo esc_html__( 'Frontend pages for Donate, Campaign, Donor Portal, and Start Here', 'donatepress' ); ?></li>
-						<li><?php echo esc_html__( 'A DonatePress Demo navigation menu', 'donatepress' ); ?></li>
-						<li><?php echo esc_html__( 'Quick links back to your setup and settings screens', 'donatepress' ); ?></li>
-					</ul>
-				</div>
-				<div class="dp-card">
-					<div class="dp-card-head">
-						<h2><?php echo esc_html__( 'After import', 'donatepress' ); ?></h2>
-						<p><?php echo esc_html__( 'Use the demo as your working reference, then replace the sample copy and gateway configuration with your real data.', 'donatepress' ); ?></p>
-					</div>
-					<div class="dp-link-list">
-						<a href="<?php echo esc_url( admin_url( 'admin.php?page=donatepress' ) ); ?>"><?php echo esc_html__( 'Open Settings', 'donatepress' ); ?></a>
-						<a href="<?php echo esc_url( admin_url( 'admin.php?page=donatepress-forms' ) ); ?>"><?php echo esc_html__( 'Review Forms', 'donatepress' ); ?></a>
-						<a href="<?php echo esc_url( admin_url( 'admin.php?page=donatepress-campaigns' ) ); ?>"><?php echo esc_html__( 'Review Campaigns', 'donatepress' ); ?></a>
-					</div>
-				</div>
-			</div>
-
-			<?php if ( ! empty( $status['has_import'] ) ) : ?>
-				<div class="dp-card dp-stack-top">
-					<div class="dp-card-head">
-						<h2><?php echo esc_html__( 'Demo Links', 'donatepress' ); ?></h2>
-						<p><?php echo esc_html__( 'Open the generated pages to verify the frontend experience.', 'donatepress' ); ?></p>
-					</div>
-					<div class="dp-link-list">
-						<?php foreach ( (array) ( $status['pages'] ?? array() ) as $page_id ) : ?>
-							<?php if ( get_post_status( (int) $page_id ) ) : ?>
-								<a href="<?php echo esc_url( get_permalink( (int) $page_id ) ?: '#' ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( get_the_title( (int) $page_id ) ); ?></a>
-							<?php endif; ?>
-						<?php endforeach; ?>
-					</div>
-					<p class="dp-inline-note">
-						<?php
-						if ( ! empty( $status['assigned_location'] ) ) {
-							printf(
-								/* translators: %s theme menu location slug */
-								esc_html__( 'The demo menu is assigned to the "%s" theme location.', 'donatepress' ),
-								esc_html( (string) $status['assigned_location'] )
-							);
-						} else {
-							echo esc_html__( 'The demo menu was created but not auto-assigned because this theme already uses all menu locations.', 'donatepress' );
-						}
-						?>
-					</p>
-				</div>
-			<?php endif; ?>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Render donations list page.
-	 */
-	public function render_donations_page(): void {
-		if ( ! $this->can_access( 'admin.donations' ) ) {
-			return;
-		}
-
-		$repository = new DonationRepository( $this->db() );
-		$rows       = $repository->list_recent( 20 );
-
-		$table_rows = array();
-		foreach ( $rows as $row ) {
-			$donor_name = trim( (string) $row['donor_first_name'] . ' ' . (string) $row['donor_last_name'] );
-			if ( '' === $donor_name ) {
-				$donor_name = (string) $row['donor_email'];
-			}
-
-			$table_rows[] = array(
-				(string) $row['donation_number'],
-				$donor_name,
-				strtoupper( (string) $row['currency'] ) . ' ' . number_format_i18n( (float) $row['amount'], 2 ),
-				ucfirst( sanitize_text_field( (string) $row['gateway'] ) ),
-				ucfirst( sanitize_text_field( (string) $row['status'] ) ),
-				$this->format_datetime( (string) $row['donated_at'] ),
-			);
-		}
-
-		$this->render_data_page(
-			__( 'Donations', 'donatepress' ),
-			__( 'Recent donations and payment state overview.', 'donatepress' ),
-			array(
-				array(
-					'label' => __( 'Total Donations', 'donatepress' ),
-					'value' => (string) $repository->count_all(),
-				),
-				array(
-					'label' => __( 'Completed', 'donatepress' ),
-					'value' => (string) $repository->count_by_status( 'completed' ),
-				),
-				array(
-					'label' => __( 'Pending', 'donatepress' ),
-					'value' => (string) $repository->count_by_status( 'pending' ),
-				),
-				array(
-					'label' => __( 'Completed Volume', 'donatepress' ),
-					'value' => $this->format_money( $repository->sum_by_status( 'completed' ) ),
-				),
-			),
-			array(
-				__( 'Donation #', 'donatepress' ),
-				__( 'Donor', 'donatepress' ),
-				__( 'Amount', 'donatepress' ),
-				__( 'Gateway', 'donatepress' ),
-				__( 'Status', 'donatepress' ),
-				__( 'Date', 'donatepress' ),
-			),
-			$table_rows,
-			__( 'No donations found yet.', 'donatepress' )
-		);
-	}
-
-	/**
-	 * Render donors list page.
-	 */
-	public function render_donors_page(): void {
-		if ( ! $this->can_access( 'admin.donors' ) ) {
-			return;
-		}
-
-		$repository = new DonorRepository( $this->db() );
-		$rows       = $repository->list_recent( 20 );
-
-		$table_rows = array();
-		foreach ( $rows as $row ) {
-			$full_name = trim( (string) $row['first_name'] . ' ' . (string) $row['last_name'] );
-			$table_rows[] = array(
-				'' !== $full_name ? $full_name : __( 'Anonymous', 'donatepress' ),
-				(string) $row['email'],
-				(string) $row['donation_count'],
-				$this->format_money( (float) $row['total_donated'] ),
-				ucfirst( sanitize_text_field( (string) $row['status'] ) ),
-				$this->format_datetime( (string) $row['created_at'] ),
-			);
-		}
-
-		$this->render_data_page(
-			__( 'Donors', 'donatepress' ),
-			__( 'Donor records and contribution totals.', 'donatepress' ),
-			array(
-				array(
-					'label' => __( 'Total Donors', 'donatepress' ),
-					'value' => (string) $repository->count_all(),
-				),
-				array(
-					'label' => __( 'Lifetime Volume', 'donatepress' ),
-					'value' => $this->format_money( $repository->sum_total_donated() ),
-				),
-			),
-			array(
-				__( 'Name', 'donatepress' ),
-				__( 'Email', 'donatepress' ),
-				__( 'Donations', 'donatepress' ),
-				__( 'Total Donated', 'donatepress' ),
-				__( 'Status', 'donatepress' ),
-				__( 'Joined', 'donatepress' ),
-			),
-			$table_rows,
-			__( 'No donors found yet.', 'donatepress' )
-		);
-	}
-
-	/**
-	 * Render forms list page.
-	 */
-	public function render_forms_page(): void {
-		if ( ! $this->can_access( 'admin.forms' ) ) {
-			return;
-		}
-
-		$repository = new FormRepository( $this->db() );
-		$filters    = $this->list_filters( 'forms' );
-		$per_page   = 10;
-		$rows       = $repository->list( $per_page, $filters['offset'], $filters['search'], $filters['status'] );
-		$total_rows = $repository->count_filtered( $filters['search'], $filters['status'] );
-		$editing_id = isset( $_GET['form_id'] ) ? absint( wp_unslash( $_GET['form_id'] ) ) : 0;
-		$editing    = $editing_id > 0 ? $repository->find( $editing_id ) : null;
-		?>
-		<div class="wrap donatepress-admin">
-			<div class="dp-card">
-				<div class="dp-card-toolbar">
-					<div class="dp-card-head">
-						<h2><?php echo esc_html__( 'Forms', 'donatepress' ); ?></h2>
-						<p><?php echo esc_html__( 'Create donation forms, adjust defaults, and copy the shortcode directly into any page or post.', 'donatepress' ); ?></p>
-					</div>
-					<?php if ( $editing ) : ?>
-						<a class="button button-secondary" href="<?php echo esc_url( admin_url( 'admin.php?page=donatepress-forms' ) ); ?>"><?php echo esc_html__( 'Add New Form', 'donatepress' ); ?></a>
-					<?php endif; ?>
-				</div>
-
-				<?php $this->render_action_notice( 'forms' ); ?>
-
-				<div class="dp-stats-grid">
-					<div class="dp-stat"><p class="dp-stat-label"><?php echo esc_html__( 'Total Forms', 'donatepress' ); ?></p><p class="dp-stat-value"><?php echo esc_html( (string) $repository->count_all() ); ?></p></div>
-					<div class="dp-stat"><p class="dp-stat-label"><?php echo esc_html__( 'Active Forms', 'donatepress' ); ?></p><p class="dp-stat-value"><?php echo esc_html( (string) $repository->count_active() ); ?></p></div>
-				</div>
-
-				<?php $this->render_list_filters( 'donatepress-forms', 'forms', $filters['search'], $filters['status'], array( '' => __( 'All statuses', 'donatepress' ), 'active' => __( 'Active', 'donatepress' ), 'draft' => __( 'Draft', 'donatepress' ), 'archived' => __( 'Archived', 'donatepress' ) ) ); ?>
-
-				<div class="dp-card dp-card-form">
-					<div class="dp-card-head">
-						<h3><?php echo esc_html( $editing ? __( 'Edit Form', 'donatepress' ) : __( 'Add Form', 'donatepress' ) ); ?></h3>
-						<p><?php echo esc_html__( 'Titles are required. Default amount must be greater than zero.', 'donatepress' ); ?></p>
-					</div>
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="dp-admin-inline-form">
-						<input type="hidden" name="action" value="donatepress_save_form" />
-						<input type="hidden" name="form_id" value="<?php echo esc_attr( (string) (int) ( $editing['id'] ?? 0 ) ); ?>" />
-						<?php wp_nonce_field( 'donatepress_save_form' ); ?>
-						<div class="dp-grid two-col">
-							<?php $this->render_admin_text_control( 'form_title', __( 'Title', 'donatepress' ), (string) ( $editing['title'] ?? '' ), true ); ?>
-							<?php $this->render_admin_text_control( 'form_slug', __( 'Slug', 'donatepress' ), (string) ( $editing['slug'] ?? '' ) ); ?>
-							<?php $this->render_admin_text_control( 'form_default_amount', __( 'Default Amount', 'donatepress' ), (string) ( $editing['default_amount'] ?? '25' ), true, 'number', '0.01' ); ?>
-							<?php $this->render_admin_select_control( 'form_currency', __( 'Currency', 'donatepress' ), (string) ( $editing['currency'] ?? 'USD' ), array( 'USD' => 'USD', 'EUR' => 'EUR', 'GBP' => 'GBP' ) ); ?>
-							<?php $this->render_admin_select_control( 'form_gateway', __( 'Gateway', 'donatepress' ), (string) ( $editing['gateway'] ?? 'stripe' ), array( 'stripe' => 'Stripe', 'paypal' => 'PayPal' ) ); ?>
-							<?php $this->render_admin_select_control( 'form_status', __( 'Status', 'donatepress' ), (string) ( $editing['status'] ?? 'active' ), array( 'active' => 'Active', 'draft' => 'Draft', 'archived' => 'Archived' ) ); ?>
-						</div>
-						<?php submit_button( $editing ? __( 'Update Form', 'donatepress' ) : __( 'Create Form', 'donatepress' ), 'primary', 'submit', false ); ?>
-					</form>
-				</div>
-
-					<div class="dp-table-wrap">
-					<table class="widefat striped">
-						<thead>
-							<tr>
-								<th><?php echo esc_html__( 'Title', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Shortcode', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Slug', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Default Amount', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Gateway', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Status', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Created', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Actions', 'donatepress' ); ?></th>
-							</tr>
-						</thead>
-						<tbody>
-							<?php if ( empty( $rows ) ) : ?>
-								<tr><td colspan="8"><?php echo esc_html__( 'No forms found yet.', 'donatepress' ); ?></td></tr>
-							<?php else : ?>
-								<?php foreach ( $rows as $row ) : ?>
-									<?php $shortcode = sprintf( '[donatepress_form id="%d"]', (int) $row['id'] ); ?>
-									<?php $input_id = 'dp-form-shortcode-' . (int) $row['id']; ?>
-									<tr>
-										<td><?php echo esc_html( (string) $row['title'] ); ?></td>
-										<td>
-											<div class="dp-inline-code">
-												<input type="text" id="<?php echo esc_attr( $input_id ); ?>" readonly value="<?php echo esc_attr( $shortcode ); ?>" />
-												<button type="button" class="button button-secondary" data-copy-target="<?php echo esc_attr( $input_id ); ?>"><?php echo esc_html__( 'Copy', 'donatepress' ); ?></button>
-											</div>
-										</td>
-										<td><?php echo esc_html( (string) $row['slug'] ); ?></td>
-										<td><?php echo esc_html( $this->format_money( (float) $row['default_amount'], strtoupper( (string) $row['currency'] ) ) ); ?></td>
-										<td><?php echo esc_html( ucfirst( sanitize_text_field( (string) $row['gateway'] ) ) ); ?></td>
-										<td><?php echo esc_html( ucfirst( sanitize_text_field( (string) $row['status'] ) ) ); ?></td>
-										<td><?php echo esc_html( $this->format_datetime( (string) $row['created_at'] ) ); ?></td>
-										<td>
-											<div class="dp-table-actions">
-												<a class="button button-secondary" href="<?php echo esc_url( add_query_arg( array( 'page' => 'donatepress-forms', 'form_id' => (int) $row['id'] ), admin_url( 'admin.php' ) ) ); ?>"><?php echo esc_html__( 'Edit', 'donatepress' ); ?></a>
-												<a class="button-link button-link-delete" href="<?php echo esc_url( wp_nonce_url( add_query_arg( array( 'action' => 'donatepress_delete_form', 'form_id' => (int) $row['id'] ), admin_url( 'admin-post.php' ) ), 'donatepress_delete_form_' . (int) $row['id'] ) ); ?>"><?php echo esc_html__( 'Delete', 'donatepress' ); ?></a>
-											</div>
-										</td>
-									</tr>
-								<?php endforeach; ?>
-							<?php endif; ?>
-						</tbody>
-					</table>
-					</div>
-					<?php $this->render_pagination( 'donatepress-forms', 'forms', $filters['page'], $per_page, $total_rows, array( 'form_id' => $editing ? (int) $editing['id'] : null ) ); ?>
-				</div>
-			</div>
-		<?php
-	}
-
-	/**
-	 * Render campaigns list page.
-	 */
-	public function render_campaigns_page(): void {
-		if ( ! $this->can_access( 'admin.campaigns' ) ) {
-			return;
-		}
-
-		$repository = new CampaignRepository( $this->db() );
-		$filters    = $this->list_filters( 'campaigns' );
-		$per_page   = 10;
-		$rows       = $repository->list( $per_page, $filters['offset'], $filters['search'], $filters['status'] );
-		$total_rows = $repository->count_filtered( $filters['search'], $filters['status'] );
-		$form_repository = new FormRepository( $this->db() );
-		$first_form      = $form_repository->find_first_active();
-		$editing_id      = isset( $_GET['campaign_id'] ) ? absint( wp_unslash( $_GET['campaign_id'] ) ) : 0;
-		$editing         = $editing_id > 0 ? $repository->find( $editing_id ) : null;
-		?>
-		<div class="wrap donatepress-admin">
-			<div class="dp-card">
-				<div class="dp-card-toolbar">
-					<div class="dp-card-head">
-						<h2><?php echo esc_html__( 'Campaigns', 'donatepress' ); ?></h2>
-						<p><?php echo esc_html__( 'Create focused fundraising campaigns with goals and a dedicated frontend shortcode.', 'donatepress' ); ?></p>
-					</div>
-					<?php if ( $editing ) : ?>
-						<a class="button button-secondary" href="<?php echo esc_url( admin_url( 'admin.php?page=donatepress-campaigns' ) ); ?>"><?php echo esc_html__( 'Add New Campaign', 'donatepress' ); ?></a>
-					<?php endif; ?>
-				</div>
-
-				<?php $this->render_action_notice( 'campaigns' ); ?>
-
-				<div class="dp-stats-grid">
-					<div class="dp-stat"><p class="dp-stat-label"><?php echo esc_html__( 'Total Campaigns', 'donatepress' ); ?></p><p class="dp-stat-value"><?php echo esc_html( (string) $repository->count_all() ); ?></p></div>
-					<div class="dp-stat"><p class="dp-stat-label"><?php echo esc_html__( 'Active Campaigns', 'donatepress' ); ?></p><p class="dp-stat-value"><?php echo esc_html( (string) $repository->count_active() ); ?></p></div>
-					<div class="dp-stat"><p class="dp-stat-label"><?php echo esc_html__( 'Raised Amount', 'donatepress' ); ?></p><p class="dp-stat-value"><?php echo esc_html( $this->format_money( $repository->sum_raised_amount() ) ); ?></p></div>
-				</div>
-
-				<?php $this->render_list_filters( 'donatepress-campaigns', 'campaigns', $filters['search'], $filters['status'], array( '' => __( 'All statuses', 'donatepress' ), 'active' => __( 'Active', 'donatepress' ), 'draft' => __( 'Draft', 'donatepress' ), 'completed' => __( 'Completed', 'donatepress' ), 'archived' => __( 'Archived', 'donatepress' ) ) ); ?>
-
-				<div class="dp-card dp-card-form">
-					<div class="dp-card-head">
-						<h3><?php echo esc_html( $editing ? __( 'Edit Campaign', 'donatepress' ) : __( 'Add Campaign', 'donatepress' ) ); ?></h3>
-						<p><?php echo esc_html__( 'Campaign title is required. Raised amount cannot exceed a negative number, and goal amount cannot be below zero.', 'donatepress' ); ?></p>
-					</div>
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="dp-admin-inline-form">
-						<input type="hidden" name="action" value="donatepress_save_campaign" />
-						<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) ( $editing['id'] ?? 0 ) ); ?>" />
-						<?php wp_nonce_field( 'donatepress_save_campaign' ); ?>
-						<div class="dp-grid two-col">
-							<?php $this->render_admin_text_control( 'campaign_title', __( 'Title', 'donatepress' ), (string) ( $editing['title'] ?? '' ), true ); ?>
-							<?php $this->render_admin_text_control( 'campaign_slug', __( 'Slug', 'donatepress' ), (string) ( $editing['slug'] ?? '' ) ); ?>
-							<?php $this->render_admin_text_control( 'campaign_goal_amount', __( 'Goal Amount', 'donatepress' ), (string) ( $editing['goal_amount'] ?? '' ), false, 'number', '0.01' ); ?>
-							<?php $this->render_admin_text_control( 'campaign_raised_amount', __( 'Raised Amount', 'donatepress' ), (string) ( $editing['raised_amount'] ?? '0' ), false, 'number', '0.01' ); ?>
-							<?php $this->render_admin_select_control( 'campaign_status', __( 'Status', 'donatepress' ), (string) ( $editing['status'] ?? 'draft' ), array( 'draft' => 'Draft', 'active' => 'Active', 'completed' => 'Completed', 'archived' => 'Archived' ) ); ?>
-						</div>
-						<div class="dp-field">
-							<label for="campaign_description"><?php echo esc_html__( 'Description', 'donatepress' ); ?></label>
-							<textarea id="campaign_description" name="campaign_description" rows="4"><?php echo esc_textarea( (string) ( $editing['description'] ?? '' ) ); ?></textarea>
-						</div>
-						<?php submit_button( $editing ? __( 'Update Campaign', 'donatepress' ) : __( 'Create Campaign', 'donatepress' ), 'primary', 'submit', false ); ?>
-					</form>
-				</div>
-
-					<div class="dp-table-wrap">
-					<table class="widefat striped">
-						<thead>
-							<tr>
-								<th><?php echo esc_html__( 'Title', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Slug', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Goal', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Raised', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Shortcode', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Status', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Created', 'donatepress' ); ?></th>
-								<th><?php echo esc_html__( 'Actions', 'donatepress' ); ?></th>
-							</tr>
-						</thead>
-						<tbody>
-							<?php if ( empty( $rows ) ) : ?>
-								<tr><td colspan="8"><?php echo esc_html__( 'No campaigns found yet.', 'donatepress' ); ?></td></tr>
-							<?php else : ?>
-								<?php foreach ( $rows as $row ) : ?>
-									<?php $campaign_shortcode = $first_form ? sprintf( '[donatepress_campaign id="%d" form="%d"]', (int) $row['id'], (int) $first_form['id'] ) : sprintf( '[donatepress_campaign id="%d"]', (int) $row['id'] ); ?>
-									<?php $input_id = 'dp-campaign-shortcode-' . (int) $row['id']; ?>
-									<tr>
-										<td><?php echo esc_html( (string) $row['title'] ); ?></td>
-										<td><?php echo esc_html( (string) $row['slug'] ); ?></td>
-										<td><?php echo esc_html( null !== $row['goal_amount'] ? $this->format_money( (float) $row['goal_amount'] ) : '-' ); ?></td>
-										<td><?php echo esc_html( $this->format_money( (float) $row['raised_amount'] ) ); ?></td>
-										<td>
-											<div class="dp-inline-code">
-												<input type="text" id="<?php echo esc_attr( $input_id ); ?>" readonly value="<?php echo esc_attr( $campaign_shortcode ); ?>" />
-												<button type="button" class="button button-secondary" data-copy-target="<?php echo esc_attr( $input_id ); ?>"><?php echo esc_html__( 'Copy', 'donatepress' ); ?></button>
-											</div>
-										</td>
-										<td><?php echo esc_html( ucfirst( sanitize_text_field( (string) $row['status'] ) ) ); ?></td>
-										<td><?php echo esc_html( $this->format_datetime( (string) $row['created_at'] ) ); ?></td>
-										<td>
-											<div class="dp-table-actions">
-												<a class="button button-secondary" href="<?php echo esc_url( add_query_arg( array( 'page' => 'donatepress-campaigns', 'campaign_id' => (int) $row['id'] ), admin_url( 'admin.php' ) ) ); ?>"><?php echo esc_html__( 'Edit', 'donatepress' ); ?></a>
-												<a class="button-link button-link-delete" href="<?php echo esc_url( wp_nonce_url( add_query_arg( array( 'action' => 'donatepress_delete_campaign', 'campaign_id' => (int) $row['id'] ), admin_url( 'admin-post.php' ) ), 'donatepress_delete_campaign_' . (int) $row['id'] ) ); ?>"><?php echo esc_html__( 'Delete', 'donatepress' ); ?></a>
-											</div>
-										</td>
-									</tr>
-								<?php endforeach; ?>
-							<?php endif; ?>
-						</tbody>
-					</table>
-					</div>
-					<?php $this->render_pagination( 'donatepress-campaigns', 'campaigns', $filters['page'], $per_page, $total_rows, array( 'campaign_id' => $editing ? (int) $editing['id'] : null ) ); ?>
-				</div>
-			</div>
-		<?php
-	}
-
-	/**
-	 * Render reports summary page.
-	 */
-	public function render_reports_page(): void {
-		if ( ! $this->can_access( 'admin.reports' ) ) {
-			return;
-		}
-
-		$donation_repository = new DonationRepository( $this->db() );
-		$donor_repository    = new DonorRepository( $this->db() );
-		$form_repository     = new FormRepository( $this->db() );
-		$campaign_repository = new CampaignRepository( $this->db() );
-
-		$rows = array(
-			array( __( 'Completed Donation Volume', 'donatepress' ), $this->format_money( $donation_repository->sum_by_status( 'completed' ) ) ),
-			array( __( 'Completed Donations', 'donatepress' ), (string) $donation_repository->count_by_status( 'completed' ) ),
-			array( __( 'Pending Donations', 'donatepress' ), (string) $donation_repository->count_by_status( 'pending' ) ),
-			array( __( 'Total Donors', 'donatepress' ), (string) $donor_repository->count_all() ),
-			array( __( 'Donor Lifetime Volume', 'donatepress' ), $this->format_money( $donor_repository->sum_total_donated() ) ),
-			array( __( 'Active Forms', 'donatepress' ), (string) $form_repository->count_active() ),
-			array( __( 'Active Campaigns', 'donatepress' ), (string) $campaign_repository->count_active() ),
-			array( __( 'Campaign Raised Amount', 'donatepress' ), $this->format_money( $campaign_repository->sum_raised_amount() ) ),
-		);
-
-		$this->render_data_page(
-			__( 'Reports', 'donatepress' ),
-			__( 'Operational summary for donations, donors, forms, and campaigns.', 'donatepress' ),
-			array(
-				array(
-					'label' => __( 'Data Sources', 'donatepress' ),
-					'value' => '4',
-				),
-				array(
-					'label' => __( 'Snapshot Time', 'donatepress' ),
-					'value' => $this->format_datetime( current_time( 'mysql', true ) ),
-				),
-			),
-			array(
-				__( 'Metric', 'donatepress' ),
-				__( 'Value', 'donatepress' ),
-			),
-			$rows,
-			__( 'No report data is available yet.', 'donatepress' )
-		);
-	}
-
-	/**
-	 * Render recurring subscriptions page.
-	 */
-	public function render_subscriptions_page(): void {
-		if ( ! $this->can_access( 'admin.subscriptions' ) ) {
-			return;
-		}
-
-		$repository = new SubscriptionRepository( $this->db() );
-		$rows       = $repository->list_recent( 25 );
-
-		$table_rows = array();
-		foreach ( $rows as $row ) {
-			$table_rows[] = array(
-				(string) $row['subscription_number'],
-				ucfirst( sanitize_text_field( (string) $row['gateway'] ) ),
-				$this->format_money( (float) $row['amount'], strtoupper( (string) $row['currency'] ) ),
-				ucfirst( sanitize_text_field( (string) $row['frequency'] ) ),
-				ucfirst( sanitize_text_field( (string) $row['status'] ) ),
-				(string) (int) $row['failure_count'],
-				$this->format_datetime( (string) $row['updated_at'] ),
-			);
-		}
-
-		$this->render_data_page(
-			__( 'Subscriptions', 'donatepress' ),
-			__( 'Recurring donation subscription lifecycle and health snapshot.', 'donatepress' ),
-			array(
-				array(
-					'label' => __( 'Total Subscriptions', 'donatepress' ),
-					'value' => (string) $repository->count_all(),
-				),
-				array(
-					'label' => __( 'Active', 'donatepress' ),
-					'value' => (string) $repository->count_by_status( 'active' ),
-				),
-				array(
-					'label' => __( 'Failed', 'donatepress' ),
-					'value' => (string) $repository->count_by_status( 'failed' ),
-				),
-				array(
-					'label' => __( 'Paused', 'donatepress' ),
-					'value' => (string) $repository->count_by_status( 'paused' ),
-				),
-			),
-			array(
-				__( 'Subscription #', 'donatepress' ),
-				__( 'Gateway', 'donatepress' ),
-				__( 'Amount', 'donatepress' ),
-				__( 'Frequency', 'donatepress' ),
-				__( 'Status', 'donatepress' ),
-				__( 'Failures', 'donatepress' ),
-				__( 'Updated', 'donatepress' ),
-			),
-			$table_rows,
-			__( 'No subscriptions found yet.', 'donatepress' )
-		);
-	}
-
-	/**
-	 * Render common data page shell.
-	 *
-	 * @param array<int,array<string,string>> $metrics
-	 * @param array<int,string>               $columns
-	 * @param array<int,array<int,string>>    $rows
-	 */
-	private function render_data_page( string $title, string $message, array $metrics, array $columns, array $rows, string $empty_message ): void {
-		?>
-		<div class="wrap donatepress-admin">
-			<div class="dp-card">
-				<div class="dp-card-head">
-					<h2><?php echo esc_html( $title ); ?></h2>
-					<p><?php echo esc_html( $message ); ?></p>
-				</div>
-
-				<?php if ( ! empty( $metrics ) ) : ?>
-					<div class="dp-stats-grid">
-						<?php foreach ( $metrics as $metric ) : ?>
-							<div class="dp-stat">
-								<p class="dp-stat-label"><?php echo esc_html( $metric['label'] ?? '' ); ?></p>
-								<p class="dp-stat-value"><?php echo esc_html( $metric['value'] ?? '' ); ?></p>
-							</div>
-						<?php endforeach; ?>
-					</div>
-				<?php endif; ?>
-
-				<div class="dp-table-wrap">
-					<table class="widefat striped">
-						<thead>
-							<tr>
-								<?php foreach ( $columns as $column ) : ?>
-									<th scope="col"><?php echo esc_html( $column ); ?></th>
-								<?php endforeach; ?>
-							</tr>
-						</thead>
-						<tbody>
-							<?php if ( empty( $rows ) ) : ?>
-								<tr>
-									<td colspan="<?php echo esc_attr( (string) count( $columns ) ); ?>"><?php echo esc_html( $empty_message ); ?></td>
-								</tr>
-							<?php else : ?>
-								<?php foreach ( $rows as $row ) : ?>
-									<tr>
-										<?php foreach ( $row as $value ) : ?>
-											<td><?php echo esc_html( $value ); ?></td>
-										<?php endforeach; ?>
-									</tr>
-								<?php endforeach; ?>
-							<?php endif; ?>
-						</tbody>
-					</table>
-				</div>
-			</div>
-		</div>
-		<?php
-	}
-
-	/**
 	 * Sanitize all plugin settings.
 	 *
 	 * @param array<string,mixed> $input Raw settings.
@@ -1093,31 +489,6 @@ class SettingsPage {
 		echo '</p></div>';
 	}
 
-	/**
-	 * Handle demo import action.
-	 */
-	public function handle_demo_import(): void {
-		if ( ! $this->can_access( 'admin.setup' ) ) {
-			wp_die( esc_html__( 'You are not allowed to import demo content.', 'donatepress' ) );
-		}
-
-		check_admin_referer( 'donatepress_demo_import' );
-
-		$service = new DemoImportService();
-		$result  = $service->import( isset( $_POST['menu_location'] ) ? sanitize_key( wp_unslash( $_POST['menu_location'] ) ) : '' );
-		$args    = array(
-			'page'        => 'donatepress-demo-import',
-			'demo-import' => ! empty( $result['success'] ) ? 'success' : 'failed',
-		);
-
-		if ( empty( $result['success'] ) && ! empty( $result['message'] ) ) {
-			$args['message'] = (string) $result['message'];
-		}
-
-		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
-		exit;
-	}
-
 	private function required_fields(): array {
 		$fields = array(
 			'organization_name',
@@ -1177,168 +548,6 @@ class SettingsPage {
 	private function can_access( string $scope ): bool {
 		$manager = new CapabilityManager();
 		return $manager->can( $scope );
-	}
-
-	/**
-	 * Format money for admin screens.
-	 */
-	private function format_money( float $amount, string $currency = 'USD' ): string {
-		return strtoupper( sanitize_text_field( $currency ) ) . ' ' . number_format_i18n( $amount, 2 );
-	}
-
-	/**
-	 * Format UTC datetime string for admin display.
-	 */
-	private function format_datetime( string $datetime ): string {
-		if ( '' === $datetime || '0000-00-00 00:00:00' === $datetime ) {
-			return '-';
-		}
-
-		$timestamp = strtotime( $datetime . ' UTC' );
-		if ( false === $timestamp ) {
-			return $datetime;
-		}
-
-		return wp_date( 'Y-m-d H:i', $timestamp );
-	}
-
-	/**
-	 * Render success/error notices for inline admin CRUD.
-	 */
-	private function render_action_notice( string $key ): void {
-		$result = isset( $_GET[ $key ] ) ? sanitize_key( wp_unslash( $_GET[ $key ] ) ) : '';
-		if ( '' === $result ) {
-			return;
-		}
-
-		$messages = array(
-			'saved'   => array( 'success', __( 'Saved successfully.', 'donatepress' ) ),
-			'deleted' => array( 'success', __( 'Deleted successfully.', 'donatepress' ) ),
-			'invalid' => array( 'error', __( 'Please correct the required fields and numeric values, then try again.', 'donatepress' ) ),
-			'failed'  => array( 'error', __( 'The requested action could not be completed.', 'donatepress' ) ),
-		);
-
-		if ( ! isset( $messages[ $result ] ) ) {
-			return;
-		}
-
-		$type    = $messages[ $result ][0];
-		$message = $messages[ $result ][1];
-		echo '<div class="notice notice-' . esc_attr( $type ) . ' is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
-	}
-
-	/**
-	 * Render a simple admin text field.
-	 */
-	private function render_admin_text_control( string $name, string $label, string $value, bool $required = false, string $type = 'text', string $step = '' ): void {
-		echo '<div class="dp-field">';
-		echo '<label for="' . esc_attr( $name ) . '">' . esc_html( $label );
-		if ( $required ) {
-			echo ' <span class="required">*</span>';
-		}
-		echo '</label>';
-		echo '<input id="' . esc_attr( $name ) . '" name="' . esc_attr( $name ) . '" type="' . esc_attr( $type ) . '" value="' . esc_attr( $value ) . '"' . ( $required ? ' required' : '' ) . ( '' !== $step ? ' step="' . esc_attr( $step ) . '"' : '' ) . ' />';
-		echo '</div>';
-	}
-
-	/**
-	 * Render a simple admin select field.
-	 *
-	 * @param array<string,string> $options
-	 */
-	private function render_admin_select_control( string $name, string $label, string $value, array $options ): void {
-		echo '<div class="dp-field">';
-		echo '<label for="' . esc_attr( $name ) . '">' . esc_html( $label ) . '</label>';
-		echo '<select id="' . esc_attr( $name ) . '" name="' . esc_attr( $name ) . '">';
-		foreach ( $options as $option_value => $option_label ) {
-			echo '<option value="' . esc_attr( $option_value ) . '"' . selected( $value, $option_value, false ) . '>' . esc_html( $option_label ) . '</option>';
-		}
-		echo '</select>';
-		echo '</div>';
-	}
-
-	/**
-	 * Parse search/status/page filters for list screens.
-	 *
-	 * @return array{search:string,status:string,page:int,offset:int}
-	 */
-	private function list_filters( string $prefix ): array {
-		$search = isset( $_GET[ $prefix . '_search' ] ) ? sanitize_text_field( wp_unslash( $_GET[ $prefix . '_search' ] ) ) : '';
-		$status = isset( $_GET[ $prefix . '_status' ] ) ? sanitize_key( wp_unslash( $_GET[ $prefix . '_status' ] ) ) : '';
-		$page   = isset( $_GET[ $prefix . '_paged' ] ) ? max( 1, absint( wp_unslash( $_GET[ $prefix . '_paged' ] ) ) ) : 1;
-
-		return array(
-			'search' => $search,
-			'status' => $status,
-			'page'   => $page,
-			'offset' => ( $page - 1 ) * 10,
-		);
-	}
-
-	/**
-	 * Render list search/filter controls.
-	 *
-	 * @param array<string,string> $status_options
-	 */
-	private function render_list_filters( string $page, string $prefix, string $search, string $status, array $status_options ): void {
-		echo '<form method="get" class="dp-list-filters">';
-		echo '<input type="hidden" name="page" value="' . esc_attr( $page ) . '" />';
-		echo '<input type="search" name="' . esc_attr( $prefix . '_search' ) . '" value="' . esc_attr( $search ) . '" placeholder="' . esc_attr__( 'Search by title or slug', 'donatepress' ) . '" />';
-		echo '<select name="' . esc_attr( $prefix . '_status' ) . '">';
-		foreach ( $status_options as $option_value => $option_label ) {
-			echo '<option value="' . esc_attr( $option_value ) . '"' . selected( $status, $option_value, false ) . '>' . esc_html( $option_label ) . '</option>';
-		}
-		echo '</select>';
-		submit_button( __( 'Filter', 'donatepress' ), 'secondary', '', false );
-		if ( '' !== $search || '' !== $status ) {
-			echo ' <a class="button button-link" href="' . esc_url( admin_url( 'admin.php?page=' . $page ) ) . '">' . esc_html__( 'Reset', 'donatepress' ) . '</a>';
-		}
-		echo '</form>';
-	}
-
-	/**
-	 * Render lightweight pagination.
-	 *
-	 * @param array<string,int|null> $extra_args
-	 */
-	private function render_pagination( string $page, string $prefix, int $current_page, int $per_page, int $total_rows, array $extra_args = array() ): void {
-		$total_pages = max( 1, (int) ceil( $total_rows / $per_page ) );
-		if ( $total_pages <= 1 ) {
-			return;
-		}
-
-		echo '<div class="dp-pagination">';
-		for ( $index = 1; $index <= $total_pages; ++$index ) {
-			$args = array(
-				'page'                => $page,
-				$prefix . '_paged'    => $index,
-			);
-			if ( isset( $_GET[ $prefix . '_search' ] ) ) {
-				$args[ $prefix . '_search' ] = sanitize_text_field( wp_unslash( $_GET[ $prefix . '_search' ] ) );
-			}
-			if ( isset( $_GET[ $prefix . '_status' ] ) ) {
-				$args[ $prefix . '_status' ] = sanitize_key( wp_unslash( $_GET[ $prefix . '_status' ] ) );
-			}
-			foreach ( $extra_args as $extra_key => $extra_value ) {
-				if ( null !== $extra_value && 0 !== $extra_value ) {
-					$args[ $extra_key ] = $extra_value;
-				}
-			}
-
-			$class = $index === $current_page ? 'button button-primary' : 'button button-secondary';
-			echo '<a class="' . esc_attr( $class ) . '" href="' . esc_url( add_query_arg( $args, admin_url( 'admin.php' ) ) ) . '">' . esc_html( (string) $index ) . '</a>';
-		}
-		echo '</div>';
-	}
-
-	/**
-	 * Registered theme menu locations.
-	 *
-	 * @return array<string,string>
-	 */
-	private function available_menu_locations(): array {
-		$locations = get_registered_nav_menus();
-		return is_array( $locations ) ? $locations : array();
 	}
 
 	private function render_text_input( string $key, string $label, bool $required = false, string $type = 'text', string $placeholder = '' ): void {

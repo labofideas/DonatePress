@@ -59,6 +59,7 @@ namespace {
 	require_once __DIR__ . '/../includes/Repositories/SubscriptionRepository.php';
 	require_once __DIR__ . '/../includes/Services/PaymentService.php';
 	require_once __DIR__ . '/../includes/Services/AuditLogService.php';
+	require_once __DIR__ . '/../includes/Services/WebhookProcessor.php';
 	require_once __DIR__ . '/../includes/Services/DonationService.php';
 	require_once __DIR__ . '/../includes/Services/RecurringChargeService.php';
 }

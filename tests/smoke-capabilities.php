@@ -34,7 +34,14 @@ if (!function_exists('apply_filters')) {
 }
 if (!function_exists('current_user_can')) {
 	function current_user_can(string $capability): bool {
-		$granted = array('manage_options');
+		$granted = array(
+			'manage_options',
+			'donatepress_manage_donors',
+			'donatepress_manage_forms',
+			'donatepress_manage_campaigns',
+			'donatepress_manage_subscriptions',
+			'donatepress_view_reports',
+		);
 		return in_array($capability, $granted, true);
 	}
 }

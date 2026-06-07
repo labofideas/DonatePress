@@ -1,0 +1,160 @@
+<?php
+
+namespace DonatePress\Admin\Renderers;
+
+use DonatePress\Repositories\DonorRepository;
+use DonatePress\Security\CapabilityManager;
+use wpdb;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Renders the admin Donors list page.
+ */
+class DonorRenderer {
+	private wpdb $wpdb;
+
+	public function __construct( wpdb $wpdb ) {
+		$this->wpdb = $wpdb;
+	}
+
+	/**
+	 * Render donors list page.
+	 */
+	public function render(): void {
+		if ( ! $this->can_access( 'admin.donors' ) ) {
+			return;
+		}
+
+		$repository = new DonorRepository( $this->wpdb );
+		$rows       = $repository->list_recent( 20 );
+
+		$table_rows = array();
+		foreach ( $rows as $row ) {
+			$full_name = trim( (string) $row['first_name'] . ' ' . (string) $row['last_name'] );
+			$table_rows[] = array(
+				'' !== $full_name ? $full_name : __( 'Anonymous', 'donatepress' ),
+				(string) $row['email'],
+				(string) $row['donation_count'],
+				$this->format_money( (float) $row['total_donated'] ),
+				ucfirst( sanitize_text_field( (string) $row['status'] ) ),
+				$this->format_datetime( (string) $row['created_at'] ),
+			);
+		}
+
+		$this->render_data_page(
+			__( 'Donors', 'donatepress' ),
+			__( 'Donor records and contribution totals.', 'donatepress' ),
+			array(
+				array(
+					'label' => __( 'Total Donors', 'donatepress' ),
+					'value' => (string) $repository->count_all(),
+				),
+				array(
+					'label' => __( 'Lifetime Volume', 'donatepress' ),
+					'value' => $this->format_money( $repository->sum_total_donated() ),
+				),
+			),
+			array(
+				__( 'Name', 'donatepress' ),
+				__( 'Email', 'donatepress' ),
+				__( 'Donations', 'donatepress' ),
+				__( 'Total Donated', 'donatepress' ),
+				__( 'Status', 'donatepress' ),
+				__( 'Joined', 'donatepress' ),
+			),
+			$table_rows,
+			__( 'No donors found yet.', 'donatepress' )
+		);
+	}
+
+	/**
+	 * Verify access for one admin scope.
+	 */
+	private function can_access( string $scope ): bool {
+		return ( new CapabilityManager() )->can( $scope );
+	}
+
+	/**
+	 * Format money for admin screens.
+	 */
+	private function format_money( float $amount, string $currency = 'USD' ): string {
+		return strtoupper( sanitize_text_field( $currency ) ) . ' ' . number_format_i18n( $amount, 2 );
+	}
+
+	/**
+	 * Format UTC datetime string for admin display.
+	 */
+	private function format_datetime( string $datetime ): string {
+		if ( '' === $datetime || '0000-00-00 00:00:00' === $datetime ) {
+			return '-';
+		}
+
+		$timestamp = strtotime( $datetime . ' UTC' );
+		if ( false === $timestamp ) {
+			return $datetime;
+		}
+
+		return wp_date( 'Y-m-d H:i', $timestamp );
+	}
+
+	/**
+	 * Render common data page shell.
+	 *
+	 * @param array<int,array<string,string>> $metrics
+	 * @param array<int,string>               $columns
+	 * @param array<int,array<int,string>>    $rows
+	 */
+	private function render_data_page( string $title, string $message, array $metrics, array $columns, array $rows, string $empty_message ): void {
+		?>
+		<div class="wrap donatepress-admin">
+			<div class="dp-card">
+				<div class="dp-card-head">
+					<h2><?php echo esc_html( $title ); ?></h2>
+					<p><?php echo esc_html( $message ); ?></p>
+				</div>
+
+				<?php if ( ! empty( $metrics ) ) : ?>
+					<div class="dp-stats-grid">
+						<?php foreach ( $metrics as $metric ) : ?>
+							<div class="dp-stat">
+								<p class="dp-stat-label"><?php echo esc_html( $metric['label'] ?? '' ); ?></p>
+								<p class="dp-stat-value"><?php echo esc_html( $metric['value'] ?? '' ); ?></p>
+							</div>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
+
+				<div class="dp-table-wrap">
+					<table class="widefat striped">
+						<thead>
+							<tr>
+								<?php foreach ( $columns as $column ) : ?>
+									<th scope="col"><?php echo esc_html( $column ); ?></th>
+								<?php endforeach; ?>
+							</tr>
+						</thead>
+						<tbody>
+							<?php if ( empty( $rows ) ) : ?>
+								<tr>
+									<td colspan="<?php echo esc_attr( (string) count( $columns ) ); ?>"><?php echo esc_html( $empty_message ); ?></td>
+								</tr>
+							<?php else : ?>
+								<?php foreach ( $rows as $row ) : ?>
+									<tr>
+										<?php foreach ( $row as $value ) : ?>
+											<td><?php echo esc_html( $value ); ?></td>
+										<?php endforeach; ?>
+									</tr>
+								<?php endforeach; ?>
+							<?php endif; ?>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+		<?php
+	}
+}

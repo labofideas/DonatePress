@@ -32,6 +32,13 @@ if ( ! empty( $settings['delete_data_on_uninstall'] ) ) {
 	}
 }
 
+$admin_role = get_role( 'administrator' );
+if ( $admin_role ) {
+	foreach ( array( 'donatepress_manage_donors', 'donatepress_manage_forms', 'donatepress_manage_campaigns', 'donatepress_manage_subscriptions', 'donatepress_view_reports' ) as $cap ) {
+		$admin_role->remove_cap( $cap );
+	}
+}
+
 delete_option( 'donatepress_settings' );
 delete_option( 'donatepress_version' );
 delete_option( 'donatepress_db_version' );

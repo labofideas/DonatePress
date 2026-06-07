@@ -8,6 +8,18 @@ if (!defined('ABSPATH')) {
 $GLOBALS['dp_test_filters'] = array();
 $GLOBALS['dp_test_transients'] = array();
 
+if (!class_exists('wpdb')) {
+	class wpdb {
+		public string $options = 'wp_options';
+		public function prepare($query, ...$args) {
+			return vsprintf(str_replace('%s', "'%s'", str_replace('%d', '%d', $query)), $args);
+		}
+		public function query($query) { return 1; }
+	}
+}
+
+$GLOBALS['wpdb'] = new wpdb();
+
 if (!class_exists('WP_Error')) {
 	class WP_Error {
 		private string $code;
@@ -88,6 +100,18 @@ if (!function_exists('get_transient')) {
 }
 if (!function_exists('set_transient')) {
 	function set_transient($key, $value, $expiration = 0) { $GLOBALS['dp_test_transients'][$key] = $value; return true; }
+}
+if (!function_exists('wp_using_ext_object_cache')) {
+	function wp_using_ext_object_cache($using = null) { return false; }
+}
+if (!function_exists('wp_cache_add')) {
+	function wp_cache_add($key, $data, $group = '', $expire = 0) { return false; }
+}
+if (!function_exists('wp_cache_get')) {
+	function wp_cache_get($key, $group = '') { return false; }
+}
+if (!function_exists('wp_cache_incr')) {
+	function wp_cache_incr($key, $offset = 1, $group = '') { return false; }
 }
 
 if (!class_exists('DonatePress\\Services\\PaymentService')) {

@@ -2,6 +2,8 @@
 
 namespace DonatePress\Core;
 
+use DonatePress\Security\CapabilityManager;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -23,6 +25,7 @@ class Activator {
 		self::run_migrations();
 		self::maybe_seed_defaults();
 		self::schedule_events();
+		CapabilityManager::register_capabilities();
 	}
 
 	/**

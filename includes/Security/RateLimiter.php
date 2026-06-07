@@ -31,6 +31,10 @@ class RateLimiter {
 	 * Atomic increment via external object cache.
 	 */
 	private function allow_via_cache( string $key, int $limit, int $window_seconds ): bool {
+		if ( $limit <= 0 ) {
+			return false;
+		}
+
 		if ( wp_cache_add( $key, 1, 'donatepress', $window_seconds ) ) {
 			return true;
 		}
@@ -51,6 +55,10 @@ class RateLimiter {
 	 * read-then-write race in the original implementation.
 	 */
 	private function allow_via_transient( string $key, int $limit, int $window_seconds ): bool {
+		if ( $limit <= 0 ) {
+			return false;
+		}
+
 		$transient_key = '_transient_' . $key;
 
 		global $wpdb;
