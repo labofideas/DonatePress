@@ -14,6 +14,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Renders the admin Donors list page.
  */
 class DonorRenderer {
+	/**
+	 * WordPress database instance.
+	 *
+	 * @var wpdb
+	 */
 	private wpdb $wpdb;
 
 	public function __construct( wpdb $wpdb ) {
@@ -33,7 +38,7 @@ class DonorRenderer {
 
 		$table_rows = array();
 		foreach ( $rows as $row ) {
-			$full_name = trim( (string) $row['first_name'] . ' ' . (string) $row['last_name'] );
+			$full_name    = trim( (string) $row['first_name'] . ' ' . (string) $row['last_name'] );
 			$table_rows[] = array(
 				'' !== $full_name ? $full_name : __( 'Anonymous', 'donatepress' ),
 				(string) $row['email'],
@@ -72,6 +77,8 @@ class DonorRenderer {
 
 	/**
 	 * Verify access for one admin scope.
+	 *
+	 * @param string $scope Admin scope identifier.
 	 */
 	private function can_access( string $scope ): bool {
 		return ( new CapabilityManager() )->can( $scope );
@@ -79,6 +86,9 @@ class DonorRenderer {
 
 	/**
 	 * Format money for admin screens.
+	 *
+	 * @param float  $amount   Numeric amount.
+	 * @param string $currency ISO currency code.
 	 */
 	private function format_money( float $amount, string $currency = 'USD' ): string {
 		return strtoupper( sanitize_text_field( $currency ) ) . ' ' . number_format_i18n( $amount, 2 );
@@ -86,6 +96,8 @@ class DonorRenderer {
 
 	/**
 	 * Format UTC datetime string for admin display.
+	 *
+	 * @param string $datetime UTC datetime string.
 	 */
 	private function format_datetime( string $datetime ): string {
 		if ( '' === $datetime || '0000-00-00 00:00:00' === $datetime ) {
@@ -103,9 +115,12 @@ class DonorRenderer {
 	/**
 	 * Render common data page shell.
 	 *
-	 * @param array<int,array<string,string>> $metrics
-	 * @param array<int,string>               $columns
-	 * @param array<int,array<int,string>>    $rows
+	 * @param string                          $title         Page title.
+	 * @param string                          $message       Page description.
+	 * @param array<int,array<string,string>> $metrics       Metric cards.
+	 * @param array<int,string>               $columns       Table column headers.
+	 * @param array<int,array<int,string>>    $rows          Table row data.
+	 * @param string                          $empty_message Shown when rows is empty.
 	 */
 	private function render_data_page( string $title, string $message, array $metrics, array $columns, array $rows, string $empty_message ): void {
 		?>

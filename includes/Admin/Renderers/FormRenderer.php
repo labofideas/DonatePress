@@ -55,7 +55,14 @@ class FormRenderer {
 					<div class="dp-stat"><p class="dp-stat-label"><?php echo esc_html__( 'Active Forms', 'donatepress' ); ?></p><p class="dp-stat-value"><?php echo esc_html( (string) $repository->count_active() ); ?></p></div>
 				</div>
 
-				<?php $this->render_list_filters( 'donatepress-forms', 'forms', $filters['search'], $filters['status'], array( '' => __( 'All statuses', 'donatepress' ), 'active' => __( 'Active', 'donatepress' ), 'draft' => __( 'Draft', 'donatepress' ), 'archived' => __( 'Archived', 'donatepress' ) ) ); ?>
+				<?php
+				$this->render_list_filters( 'donatepress-forms', 'forms', $filters['search'], $filters['status'], array(
+					''         => __( 'All statuses', 'donatepress' ),
+					'active'   => __( 'Active', 'donatepress' ),
+					'draft'    => __( 'Draft', 'donatepress' ),
+					'archived' => __( 'Archived', 'donatepress' ),
+				) );
+				?>
 
 				<div class="dp-card dp-card-form">
 					<div class="dp-card-head">
@@ -70,9 +77,26 @@ class FormRenderer {
 							<?php $this->render_admin_text_control( 'form_title', __( 'Title', 'donatepress' ), (string) ( $editing['title'] ?? '' ), true ); ?>
 							<?php $this->render_admin_text_control( 'form_slug', __( 'Slug', 'donatepress' ), (string) ( $editing['slug'] ?? '' ) ); ?>
 							<?php $this->render_admin_text_control( 'form_default_amount', __( 'Default Amount', 'donatepress' ), (string) ( $editing['default_amount'] ?? '25' ), true, 'number', '0.01' ); ?>
-							<?php $this->render_admin_select_control( 'form_currency', __( 'Currency', 'donatepress' ), (string) ( $editing['currency'] ?? 'USD' ), array( 'USD' => 'USD', 'EUR' => 'EUR', 'GBP' => 'GBP' ) ); ?>
-							<?php $this->render_admin_select_control( 'form_gateway', __( 'Gateway', 'donatepress' ), (string) ( $editing['gateway'] ?? 'stripe' ), array( 'stripe' => 'Stripe', 'paypal' => 'PayPal' ) ); ?>
-							<?php $this->render_admin_select_control( 'form_status', __( 'Status', 'donatepress' ), (string) ( $editing['status'] ?? 'active' ), array( 'active' => 'Active', 'draft' => 'Draft', 'archived' => 'Archived' ) ); ?>
+							<?php
+							$this->render_admin_select_control( 'form_currency', __( 'Currency', 'donatepress' ), (string) ( $editing['currency'] ?? 'USD' ), array(
+								'USD' => 'USD',
+								'EUR' => 'EUR',
+								'GBP' => 'GBP',
+							) );
+							?>
+							<?php
+							$this->render_admin_select_control( 'form_gateway', __( 'Gateway', 'donatepress' ), (string) ( $editing['gateway'] ?? 'stripe' ), array(
+								'stripe' => 'Stripe',
+								'paypal' => 'PayPal',
+							) );
+							?>
+							<?php
+							$this->render_admin_select_control( 'form_status', __( 'Status', 'donatepress' ), (string) ( $editing['status'] ?? 'active' ), array(
+								'active'   => 'Active',
+								'draft'    => 'Draft',
+								'archived' => 'Archived',
+							) );
+							?>
 						</div>
 						<?php submit_button( $editing ? __( 'Update Form', 'donatepress' ) : __( 'Create Form', 'donatepress' ), 'primary', 'submit', false ); ?>
 					</form>
@@ -114,8 +138,22 @@ class FormRenderer {
 										<td><?php echo esc_html( $this->format_datetime( (string) $row['created_at'] ) ); ?></td>
 										<td>
 											<div class="dp-table-actions">
-												<a class="button button-secondary" href="<?php echo esc_url( add_query_arg( array( 'page' => 'donatepress-forms', 'form_id' => (int) $row['id'] ), admin_url( 'admin.php' ) ) ); ?>"><?php echo esc_html__( 'Edit', 'donatepress' ); ?></a>
-												<a class="button-link button-link-delete" href="<?php echo esc_url( wp_nonce_url( add_query_arg( array( 'action' => 'donatepress_delete_form', 'form_id' => (int) $row['id'] ), admin_url( 'admin-post.php' ) ), 'donatepress_delete_form_' . (int) $row['id'] ) ); ?>"><?php echo esc_html__( 'Delete', 'donatepress' ); ?></a>
+												<a class="button button-secondary" href="
+												<?php
+												echo esc_url( add_query_arg( array(
+													'page' => 'donatepress-forms',
+													'form_id' => (int) $row['id'],
+												), admin_url( 'admin.php' ) ) );
+												?>
+																							"><?php echo esc_html__( 'Edit', 'donatepress' ); ?></a>
+												<a class="button-link button-link-delete" href="
+												<?php
+												echo esc_url( wp_nonce_url( add_query_arg( array(
+													'action'  => 'donatepress_delete_form',
+													'form_id' => (int) $row['id'],
+												), admin_url( 'admin-post.php' ) ), 'donatepress_delete_form_' . (int) $row['id'] ) );
+												?>
+																								"><?php echo esc_html__( 'Delete', 'donatepress' ); ?></a>
 											</div>
 										</td>
 									</tr>
@@ -268,8 +306,8 @@ class FormRenderer {
 		echo '<div class="dp-pagination">';
 		for ( $index = 1; $index <= $total_pages; ++$index ) {
 			$args = array(
-				'page'                => $page,
-				$prefix . '_paged'    => $index,
+				'page'             => $page,
+				$prefix . '_paged' => $index,
 			);
 			if ( isset( $_GET[ $prefix . '_search' ] ) ) {
 				$args[ $prefix . '_search' ] = sanitize_text_field( wp_unslash( $_GET[ $prefix . '_search' ] ) );

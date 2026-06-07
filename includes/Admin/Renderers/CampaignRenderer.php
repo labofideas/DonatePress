@@ -29,11 +29,11 @@ class CampaignRenderer {
 			return;
 		}
 
-		$repository = new CampaignRepository( $this->wpdb );
-		$filters    = $this->list_filters( 'campaigns' );
-		$per_page   = 10;
-		$rows       = $repository->list( $per_page, $filters['offset'], $filters['search'], $filters['status'] );
-		$total_rows = $repository->count_filtered( $filters['search'], $filters['status'] );
+		$repository      = new CampaignRepository( $this->wpdb );
+		$filters         = $this->list_filters( 'campaigns' );
+		$per_page        = 10;
+		$rows            = $repository->list( $per_page, $filters['offset'], $filters['search'], $filters['status'] );
+		$total_rows      = $repository->count_filtered( $filters['search'], $filters['status'] );
 		$form_repository = new FormRepository( $this->wpdb );
 		$first_form      = $form_repository->find_first_active();
 		$editing_id      = isset( $_GET['campaign_id'] ) ? absint( wp_unslash( $_GET['campaign_id'] ) ) : 0;
@@ -59,7 +59,15 @@ class CampaignRenderer {
 					<div class="dp-stat"><p class="dp-stat-label"><?php echo esc_html__( 'Raised Amount', 'donatepress' ); ?></p><p class="dp-stat-value"><?php echo esc_html( $this->format_money( $repository->sum_raised_amount() ) ); ?></p></div>
 				</div>
 
-				<?php $this->render_list_filters( 'donatepress-campaigns', 'campaigns', $filters['search'], $filters['status'], array( '' => __( 'All statuses', 'donatepress' ), 'active' => __( 'Active', 'donatepress' ), 'draft' => __( 'Draft', 'donatepress' ), 'completed' => __( 'Completed', 'donatepress' ), 'archived' => __( 'Archived', 'donatepress' ) ) ); ?>
+				<?php
+				$this->render_list_filters( 'donatepress-campaigns', 'campaigns', $filters['search'], $filters['status'], array(
+					''          => __( 'All statuses', 'donatepress' ),
+					'active'    => __( 'Active', 'donatepress' ),
+					'draft'     => __( 'Draft', 'donatepress' ),
+					'completed' => __( 'Completed', 'donatepress' ),
+					'archived'  => __( 'Archived', 'donatepress' ),
+				) );
+				?>
 
 				<div class="dp-card dp-card-form">
 					<div class="dp-card-head">
@@ -75,7 +83,14 @@ class CampaignRenderer {
 							<?php $this->render_admin_text_control( 'campaign_slug', __( 'Slug', 'donatepress' ), (string) ( $editing['slug'] ?? '' ) ); ?>
 							<?php $this->render_admin_text_control( 'campaign_goal_amount', __( 'Goal Amount', 'donatepress' ), (string) ( $editing['goal_amount'] ?? '' ), false, 'number', '0.01' ); ?>
 							<?php $this->render_admin_text_control( 'campaign_raised_amount', __( 'Raised Amount', 'donatepress' ), (string) ( $editing['raised_amount'] ?? '0' ), false, 'number', '0.01' ); ?>
-							<?php $this->render_admin_select_control( 'campaign_status', __( 'Status', 'donatepress' ), (string) ( $editing['status'] ?? 'draft' ), array( 'draft' => 'Draft', 'active' => 'Active', 'completed' => 'Completed', 'archived' => 'Archived' ) ); ?>
+							<?php
+							$this->render_admin_select_control( 'campaign_status', __( 'Status', 'donatepress' ), (string) ( $editing['status'] ?? 'draft' ), array(
+								'draft'     => 'Draft',
+								'active'    => 'Active',
+								'completed' => 'Completed',
+								'archived'  => 'Archived',
+							) );
+							?>
 						</div>
 						<div class="dp-field">
 							<label for="campaign_description"><?php echo esc_html__( 'Description', 'donatepress' ); ?></label>
@@ -121,8 +136,22 @@ class CampaignRenderer {
 										<td><?php echo esc_html( $this->format_datetime( (string) $row['created_at'] ) ); ?></td>
 										<td>
 											<div class="dp-table-actions">
-												<a class="button button-secondary" href="<?php echo esc_url( add_query_arg( array( 'page' => 'donatepress-campaigns', 'campaign_id' => (int) $row['id'] ), admin_url( 'admin.php' ) ) ); ?>"><?php echo esc_html__( 'Edit', 'donatepress' ); ?></a>
-												<a class="button-link button-link-delete" href="<?php echo esc_url( wp_nonce_url( add_query_arg( array( 'action' => 'donatepress_delete_campaign', 'campaign_id' => (int) $row['id'] ), admin_url( 'admin-post.php' ) ), 'donatepress_delete_campaign_' . (int) $row['id'] ) ); ?>"><?php echo esc_html__( 'Delete', 'donatepress' ); ?></a>
+												<a class="button button-secondary" href="
+												<?php
+												echo esc_url( add_query_arg( array(
+													'page' => 'donatepress-campaigns',
+													'campaign_id' => (int) $row['id'],
+												), admin_url( 'admin.php' ) ) );
+												?>
+																							"><?php echo esc_html__( 'Edit', 'donatepress' ); ?></a>
+												<a class="button-link button-link-delete" href="
+												<?php
+												echo esc_url( wp_nonce_url( add_query_arg( array(
+													'action' => 'donatepress_delete_campaign',
+													'campaign_id' => (int) $row['id'],
+												), admin_url( 'admin-post.php' ) ), 'donatepress_delete_campaign_' . (int) $row['id'] ) );
+												?>
+																								"><?php echo esc_html__( 'Delete', 'donatepress' ); ?></a>
 											</div>
 										</td>
 									</tr>
@@ -275,8 +304,8 @@ class CampaignRenderer {
 		echo '<div class="dp-pagination">';
 		for ( $index = 1; $index <= $total_pages; ++$index ) {
 			$args = array(
-				'page'                => $page,
-				$prefix . '_paged'    => $index,
+				'page'             => $page,
+				$prefix . '_paged' => $index,
 			);
 			if ( isset( $_GET[ $prefix . '_search' ] ) ) {
 				$args[ $prefix . '_search' ] = sanitize_text_field( wp_unslash( $_GET[ $prefix . '_search' ] ) );

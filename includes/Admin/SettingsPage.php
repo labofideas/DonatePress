@@ -193,12 +193,12 @@ class SettingsPage {
 				'donatepress-setup-wizard',
 				'donatepressSetupWizard',
 				array(
-					'nonce'       => wp_create_nonce( 'wp_rest' ),
-					'restBase'    => esc_url_raw( rest_url( 'donatepress/v1' ) ),
-					'settingsUrl' => esc_url_raw( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ),
-					'formsUrl'    => esc_url_raw( admin_url( 'admin.php?page=donatepress-forms' ) ),
+					'nonce'         => wp_create_nonce( 'wp_rest' ),
+					'restBase'      => esc_url_raw( rest_url( 'donatepress/v1' ) ),
+					'settingsUrl'   => esc_url_raw( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ),
+					'formsUrl'      => esc_url_raw( admin_url( 'admin.php?page=donatepress-forms' ) ),
 					'demoImportUrl' => esc_url_raw( admin_url( 'admin.php?page=donatepress-demo-import' ) ),
-					'status'      => $this->setup_wizard_status(),
+					'status'        => $this->setup_wizard_status(),
 				)
 			);
 		}
@@ -422,8 +422,8 @@ class SettingsPage {
 			$clean['recurring_frequencies'] = $allowed_freqs;
 		}
 
-		$countries_csv = sanitize_text_field( $input['supported_countries_csv'] ?? '' );
-		$countries     = array_filter( array_map( 'trim', explode( ',', strtoupper( $countries_csv ) ) ) );
+		$countries_csv                = sanitize_text_field( $input['supported_countries_csv'] ?? '' );
+		$countries                    = array_filter( array_map( 'trim', explode( ',', strtoupper( $countries_csv ) ) ) );
 		$clean['supported_countries'] = empty( $countries ) ? array( 'US' ) : array_values( $countries );
 		$clean['supported_countries'] = apply_filters( 'donatepress_supported_countries', $clean['supported_countries'], $input );
 
@@ -435,7 +435,7 @@ class SettingsPage {
 		$clean['stripe_webhook_secret'] = $this->resolve_secret_value( $input, $current, 'stripe_webhook_secret' );
 		$clean['paypal_secret']         = $this->resolve_secret_value( $input, $current, 'paypal_secret' );
 
-		$required = $this->required_fields();
+		$required    = $this->required_fields();
 		$is_complete = true;
 		foreach ( $required as $key ) {
 			if ( empty( $clean[ $key ] ) ) {
@@ -489,6 +489,11 @@ class SettingsPage {
 		echo '</p></div>';
 	}
 
+	/**
+	 * Required compliance fields.
+	 *
+	 * @return array<int,string>
+	 */
 	private function required_fields(): array {
 		$fields = array(
 			'organization_name',
@@ -597,6 +602,9 @@ class SettingsPage {
 
 	/**
 	 * Preserve existing secret if input value is empty.
+	 *
+	 * @param array<string,mixed> $input   Raw input.
+	 * @param array<string,mixed> $current Current stored settings.
 	 */
 	private function resolve_secret_value( array $input, array $current, string $key ): string {
 		$incoming = isset( $input[ $key ] ) ? trim( (string) $input[ $key ] ) : '';
